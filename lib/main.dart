@@ -51,19 +51,19 @@ class MyApp extends StatelessWidget {
             backgroundColor: AppColors.surface,
             foregroundColor: AppColors.primaryDark,
             elevation: 0,
-            scrolledUnderElevation: 8,
-            shadowColor: AppColors.primaryDark.withAlpha(20),
-            centerTitle: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+            scrolledUnderElevation: 2,
+            shadowColor: Colors.black.withOpacity(0.05),
+            centerTitle: false,
+            shape: const Border(
+              bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
             ),
             titleTextStyle: GoogleFonts.poppins(
               color: AppColors.primaryDark,
               fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
             ),
-            iconTheme: const IconThemeData(color: AppColors.primary),
+            iconTheme: const IconThemeData(color: AppColors.primaryDark),
           ),
           textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme)
               .apply(

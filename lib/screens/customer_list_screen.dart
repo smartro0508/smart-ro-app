@@ -49,6 +49,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 autofocus: true,
                 decoration: const InputDecoration(
                   hintText: 'Search customers...',
+                  hintStyle: TextStyle(color: AppColors.textSecondary),
                   border: InputBorder.none,
                 ),
                 style: const TextStyle(color: AppColors.primaryDark),
@@ -160,7 +161,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           width: 4,
                           child: Container(
                             decoration: const BoxDecoration(
-                              gradient: AppColors.waterGradient,
+                              color: AppColors.primary,
                             ),
                           ),
                         ),
@@ -175,21 +176,15 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      gradient: AppColors.waterGradient,
+                                      color: AppColors.primary.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(14),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.primary.withOpacity(0.3),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 3),
-                                        )
-                                      ]
+                                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                                     ),
                                     child: Center(
                                       child: Text(
                                         customer.fullName.substring(0, 1).toUpperCase(),
                                         style: const TextStyle(
-                                          color: Colors.white,
+                                          color: AppColors.primary,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 18,
                                         ),

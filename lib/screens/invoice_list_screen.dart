@@ -15,8 +15,6 @@ class InvoiceListScreen extends StatefulWidget {
 }
 
 class _InvoiceListScreenState extends State<InvoiceListScreen> {
-  int _selectedFilter = 0;
-  final List<String> _filters = ['All'];
   final ScrollController _scrollController = ScrollController();
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
@@ -52,6 +50,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 autofocus: true,
                 decoration: const InputDecoration(
                   hintText: 'Search invoices...',
+                  hintStyle: TextStyle(color: AppColors.textSecondary),
                   border: InputBorder.none,
                 ),
                 style: const TextStyle(color: AppColors.primaryDark),
@@ -100,7 +99,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       body: Column(
         children: [
           _buildDateFilter(context),
-          _buildFilterTabs(),
           Expanded(
             child: BlocBuilder<InvoiceCubit, InvoiceState>(
               builder: (context, state) {
@@ -123,7 +121,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   }
                   return ListView.separated(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
                     itemCount: filtered.length + (state.hasReachedMax ? 0 : 1),
                     separatorBuilder: (context, index) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
@@ -155,43 +153,6 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     );
   }
 
-  Widget _buildFilterTabs() {
-    return Container(
-      height: 60,
-      color: AppColors.background,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        itemCount: _filters.length,
-        itemBuilder: (context, index) {
-          final isSelected = _selectedFilter == index;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ChoiceChip(
-              label: Text(_filters[index]),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) setState(() => _selectedFilter = index);
-              },
-              selectedColor: AppColors.primary,
-              backgroundColor: AppColors.surface,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
-              elevation: isSelected ? 4 : 0,
-              shadowColor: AppColors.primary.withOpacity(0.4),
-              side: BorderSide(
-                color: isSelected ? Colors.transparent : AppColors.textSecondary.withOpacity(0.2),
-              ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   Widget _buildInvoiceCard(InvoiceModel invoice) {
     String customerName = invoice.customerData['fullName'] ?? invoice.customerData['name'] ?? 'Unknown Customer';
@@ -229,24 +190,24 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.receipt_long, size: 18, color: AppColors.primary),
+                    const Icon(Icons.receipt_long, size: 18, color: Colors.teal),
                     const SizedBox(width: 8),
                     Text(
                       invoice.invoiceNumber ?? 'INV-N/A',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.primaryDark),
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textPrimary),
                     ),
                   ],
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.success.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                    border: Border.all(color: AppColors.success.withOpacity(0.2)),
                   ),
                   child: Text(
                     invoice.type,
-                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
+                    style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
                   ),
                 ),
               ],
@@ -264,10 +225,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       width: 46,
                       height: 46,
                       decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.2),
+                        color: Colors.orange.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.person_outline, size: 24, color: AppColors.primary),
+                      child: const Icon(Icons.person_outline, size: 24, color: Colors.orange),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -292,7 +253,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                         const Text('Total', style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w500)),
                         Text(
                           '₹${invoice.grandTotal.toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.primary),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.textPrimary),
                         ),
                       ],
                     ),
@@ -317,10 +278,10 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.background,
+                        color: Colors.teal.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.water_drop_outlined, size: 14, color: AppColors.primaryLight),
+                      child: const Icon(Icons.water_drop_outlined, size: 14, color: Colors.teal),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
