@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/invoice_list_screen.dart';
@@ -13,7 +14,7 @@ final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>()
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/login',
+  initialLocation: (Hive.box('authBox').get('token') != null && Hive.box('authBox').get('token').toString().isNotEmpty) ? '/invoices' : '/login',
   routes: [
     GoRoute(
       path: '/login',

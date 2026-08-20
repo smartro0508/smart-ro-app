@@ -29,20 +29,20 @@ class MainScreen extends StatelessWidget {
 
     return Scaffold(
       body: child,
-      extendBody: true,
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Container(
-            height: 70,
+            height: 72,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(36),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(20),
+                  color: AppColors.primaryDark.withOpacity(0.08),
                   blurRadius: 24,
-                  offset: const Offset(0, 8),
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
@@ -62,39 +62,43 @@ class MainScreen extends StatelessWidget {
 
   Widget _buildNavItem(BuildContext context, int index, int currentIndex, IconData icon, IconData activeIcon, String label) {
     final isSelected = index == currentIndex;
-    final color = isSelected ? AppColors.primary : AppColors.textSecondary.withAlpha(150);
 
     return GestureDetector(
       onTap: () => _onItemTapped(index, context),
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 70,
-        color: Colors.transparent, 
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 20 : 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutBack,
-              transform: Matrix4.translationValues(0, isSelected ? -2 : 0, 0),
-              child: Icon(
-                isSelected ? activeIcon : icon,
-                color: color,
-                size: isSelected ? 28 : 24,
-              ),
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary.withOpacity(0.6),
+              size: 26,
             ),
-            const SizedBox(height: 6),
-            AnimatedOpacity(
+            AnimatedSize(
               duration: const Duration(milliseconds: 300),
-              opacity: isSelected ? 1.0 : 0.0,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-                height: 4,
-                width: isSelected ? 16 : 4,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(2),
+              curve: Curves.easeOutCubic,
+              child: SizedBox(
+                width: isSelected ? null : 0,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                  ),
                 ),
               ),
             ),

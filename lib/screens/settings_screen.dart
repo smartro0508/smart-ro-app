@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/gradient_button.dart';
+import '../controller/setting_cubit.dart';
+import '../controller/setting_state.dart';
+import '../models/setting_model.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,10 +19,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   
   // Controllers for editable fields
-  final _companyNameController = TextEditingController(text: 'AURO Water Solutions');
-  final _emailController = TextEditingController(text: 'support@auro.com');
-  final _phoneController = TextEditingController(text: '+91 1800-RO-WATER');
-  final _addressController = TextEditingController(text: '123 Tech Park, Water Purifier Hub\nNew Delhi, India');
+  final _companyNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<SettingCubit>().getSettings();
+  }
 
   @override
   void dispose() {
@@ -31,12 +41,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _saveSettings() {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Settings Updated Successfully!'),
-          backgroundColor: AppColors.success,
-        ),
+      final setting = SettingModel(
+        companyName: _companyNameController.text.trim(),
+        supportEmail: _emailController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        businessAddress: _addressController.text.trim(),
       );
+      context.read<SettingCubit>().updateSettings(setting);
     }
   }
 
@@ -76,20 +87,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
-      body: Form(
-        key: _formKey,
+      body: BlocListener<SettingCubit, SettingState>(
+        listener: (context, state) {
+          if (state is SettingLoaded) {
+            _companyNameController.text = state.setting.companyName;
+            _emailController.text = state.setting.supportEmail;
+            _phoneController.text = state.setting.phoneNumber;
+            _addressController.text = state.setting.businessAddress;
+          } else if (state is SettingUpdated) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Settings Updated Successfully!'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          } else if (state is SettingError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+            );
+          } else if (state is SettingUpdateError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+            );
+          }
+        },
+        child: Form(
+          key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(20.0),
           children: [
-            const Text(
-              'Company Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryDark,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20.0, top: 8.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.waterGradient,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Company Details',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primaryDark,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
             
             CustomTextField(
               label: 'Company Name',
@@ -126,10 +177,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 32),
             
-            GradientButton(
-              text: 'Save Changes',
-              icon: Icons.save_outlined,
-              onPressed: _saveSettings,
+            BlocBuilder<SettingCubit, SettingState>(
+              builder: (context, state) {
+                if (state is SettingLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return GradientButton(
+                  text: 'Save Changes',
+                  icon: Icons.save_outlined,
+                  isLoading: state is SettingUpdating,
+                  onPressed: state is SettingUpdating ? () {} : _saveSettings,
+                );
+              },
             ),
             
             const SizedBox(height: 48),
@@ -149,6 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
       ),
     );
   }

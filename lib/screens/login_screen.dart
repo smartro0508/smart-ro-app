@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/gradient_button.dart';
+import '../controller/auth_cubit.dart';
+import '../controller/auth_state.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
-  bool _isLoading = false;
   bool _rememberMe = false;
 
   @override
@@ -26,15 +28,12 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() async {
+  void _login() {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      // Simulate network request
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        setState(() => _isLoading = false);
-        context.go('/invoices');
-      }
+      context.read<AuthCubit>().login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
     }
   }
 
@@ -59,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            
+
             // Foreground Content
             SafeArea(
               child: Padding(
@@ -89,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Welcome Texts
                     const Text(
                       'Welcome to Smart RO',
@@ -109,9 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         letterSpacing: 0.2,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 48),
-                    
+
                     // Floating Form Card
                     Container(
                       padding: const EdgeInsets.all(28),
@@ -141,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 32),
-                            
+
                             CustomTextField(
                               label: 'Email or Mobile Number',
                               icon: Icons.person_outline,
@@ -163,12 +162,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               obscureText: _obscurePassword,
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                   color: AppColors.textSecondary,
                                   size: 20,
                                 ),
                                 onPressed: () {
-                                  setState(() => _obscurePassword = !_obscurePassword);
+                                  setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  );
                                 },
                               ),
                               validator: (value) {
@@ -179,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                             ),
                             const SizedBox(height: 20),
-                            
+
                             Row(
                               children: [
                                 SizedBox(
@@ -187,22 +190,53 @@ class _LoginScreenState extends State<LoginScreen> {
                                   width: 24,
                                   child: Checkbox(
                                     value: _rememberMe,
-                                    onChanged: (val) => setState(() => _rememberMe = val ?? false),
+                                    onChanged: (val) => setState(
+                                      () => _rememberMe = val ?? false,
+                                    ),
                                     activeColor: AppColors.primary,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                    side: const BorderSide(color: AppColors.textSecondary),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    side: const BorderSide(
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Text('Remember me', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+                                const Text(
+                                  'Remember me',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 40),
 
-                            GradientButton(
-                              text: 'Login',
-                              onPressed: _login,
-                              isLoading: _isLoading,
+                            BlocConsumer<AuthCubit, AuthState>(
+                              listener: (context, state) {
+                                if (state is AuthSuccess) {
+                                  context.go('/invoices');
+                                } else if (state is AuthFailure) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(state.error),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              },
+                              builder: (context, state) {
+                                return GradientButton(
+                                  text: 'Login',
+                                  onPressed: state is AuthLoading
+                                      ? () {}
+                                      : _login,
+                                  isLoading: state is AuthLoading,
+                                );
+                              },
                             ),
                           ],
                         ),
