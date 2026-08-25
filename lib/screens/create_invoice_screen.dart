@@ -10,6 +10,9 @@ import '../controller/invoice_cubit.dart';
 import '../controller/invoice_state.dart';
 import '../service/customer_service.dart';
 import '../service/product_service.dart';
+import '../service/service_service.dart';
+import '../models/service_model.dart';
+import '../widgets/premium_animated_app_bar.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   const CreateInvoiceScreen({super.key});
@@ -20,18 +23,55 @@ class CreateInvoiceScreen extends StatefulWidget {
 
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _discountController = TextEditingController(text: '0');
+  final _termsNotesController = TextEditingController(
+    text: 'warranty not applicable for any broken sapre parts',
+  );
+  final _productNotesController = TextEditingController();
+  final _serviceNotesController = TextEditingController();
 
   bool _applyGST = true;
+
+  bool _isSearchingCustomer = false;
+  bool _isSearchingProduct = false;
+  bool _isSearchingService = false;
 
   CustomerModel? _selectedCustomer;
   final List<InvoiceItemModel> _invoiceItems = [];
 
+  String _paymentMethod = 'Cash';
+  String _paymentStatus = 'Unpaid';
+
+  final List<String> _paymentMethods = [
+    'Cash',
+    'Card',
+    'UPI',
+    'Bank Transfer',
+    'None',
+  ];
+  final List<String> _paymentStatuses = ['Paid', 'Unpaid', 'Partial'];
+
+  @override
+  void dispose() {
+    _discountController.dispose();
+    _termsNotesController.dispose();
+    _productNotesController.dispose();
+    _serviceNotesController.dispose();
+    super.dispose();
+  }
+
   double get subtotal => _invoiceItems.fold(0, (sum, item) => sum + item.total);
-  double get totalDiscount => 0.0;
+
+  double get totalDiscount => double.tryParse(_discountController.text) ?? 0.0;
+
   double get taxableAmount => subtotal - totalDiscount;
+
   double get cgst => _applyGST ? taxableAmount * 0.09 : 0.0;
+
   double get sgst => _applyGST ? taxableAmount * 0.09 : 0.0;
+
   double get igst => 0.0;
+
   double get grandTotal => taxableAmount + cgst + sgst + igst;
 
   void _addProduct(ProductModel product) {
@@ -47,6 +87,28 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     });
   }
 
+  void _addService(ServiceModel service) {
+    if (service.servicecost > 0 ||
+        (service.servicecost == 0 && service.serviceproductcost == 0)) {
+      _addProduct(
+        ProductModel(
+          id: '${service.id}_svc',
+          name: '${service.servicename} (Service)',
+          price: service.servicecost,
+        ),
+      );
+    }
+    if (service.serviceproductcost > 0) {
+      _addProduct(
+        ProductModel(
+          id: '${service.id}_prd',
+          name: '${service.servicename} (Product)',
+          price: service.serviceproductcost,
+        ),
+      );
+    }
+  }
+
   void _updateQuantity(int index, int delta) {
     setState(() {
       _invoiceItems[index].quantity += delta;
@@ -59,10 +121,20 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Create Invoice',
-          style: TextStyle(fontWeight: FontWeight.bold),
+      appBar: PremiumAnimatedAppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/app-logo.png', height: 28),
+            const SizedBox(width: 8),
+            const Text(
+              'Create Invoice',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
         leading: IconButton(
@@ -71,285 +143,620 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         ),
       ),
       body: Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(20.0),
-                children: [
-                  _buildSectionTitle('Customer Details'),
-                  if (_selectedCustomer == null)
-                    Autocomplete<CustomerModel>(
-                      optionsBuilder: (TextEditingValue textEditingValue) async {
-                        if (textEditingValue.text.isEmpty)
-                          return const Iterable<CustomerModel>.empty();
-                        try {
-                          final customerService = CustomerService();
-                          final customers = await customerService.searchCustomers(textEditingValue.text);
-                          return customers;
-                        } catch (e) {
-                          return const Iterable<CustomerModel>.empty();
-                        }
-                      },
-                      displayStringForOption: (CustomerModel option) =>
-                          option.fullName,
-                      onSelected: (CustomerModel selection) {
-                        setState(() => _selectedCustomer = selection);
-                      },
-                      fieldViewBuilder:
-                          (context, controller, focusNode, onFieldSubmitted) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primaryDark.withOpacity(0.04),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 5),
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(20.0),
+          children: [
+            _buildSectionTitle('Customer Details'),
+            if (_selectedCustomer == null)
+              Autocomplete<CustomerModel>(
+                optionsBuilder: (TextEditingValue textEditingValue) async {
+                  if (textEditingValue.text.isEmpty)
+                    return const Iterable<CustomerModel>.empty();
+                  setState(() => _isSearchingCustomer = true);
+                  try {
+                    final customerService = CustomerService();
+                    final customers = await customerService.searchCustomers(
+                      textEditingValue.text,
+                    );
+                    setState(() => _isSearchingCustomer = false);
+                    return customers;
+                  } catch (e) {
+                    setState(() => _isSearchingCustomer = false);
+                    return const Iterable<CustomerModel>.empty();
+                  }
+                },
+                displayStringForOption: (CustomerModel option) =>
+                    option.fullName,
+                onSelected: (CustomerModel selection) {
+                  setState(() => _selectedCustomer = selection);
+                },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return _buildOptionsView<CustomerModel>(
+                    context,
+                    onSelected,
+                    options,
+                    (c) => c.fullName,
+                    (c) =>
+                        '${c.phoneNumber} ${c.city != null ? '• ${c.city}' : ''}'
+                            .trim(),
+                  );
+                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryDark.withValues(
+                                alpha: 0.04,
+                              ),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: _inputDecoration(
+                            'Search Customer by Name',
+                            Icons.search,
+                            suffixIcon: _isSearchingCustomer
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
+              )
+            else
+              _buildSelectedCustomerCard(),
+
+            const SizedBox(height: 24),
+            _buildSectionTitle('Add Products / Services'),
+            Autocomplete<ProductModel>(
+              optionsBuilder: (TextEditingValue textEditingValue) async {
+                if (textEditingValue.text.isEmpty)
+                  return const Iterable<ProductModel>.empty();
+                setState(() => _isSearchingProduct = true);
+                try {
+                  final productService = ProductService();
+                  final products = await productService.searchProducts(
+                    textEditingValue.text,
+                  );
+                  setState(() => _isSearchingProduct = false);
+                  return products;
+                } catch (e) {
+                  setState(() => _isSearchingProduct = false);
+                  return const Iterable<ProductModel>.empty();
+                }
+              },
+              displayStringForOption: (ProductModel option) => option.name,
+              onSelected: (ProductModel selection) {
+                _addProduct(selection);
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return _buildOptionsView<ProductModel>(
+                  context,
+                  onSelected,
+                  options,
+                  (p) => p.name,
+                  (p) => '₹ ${p.price.toStringAsFixed(2)}',
+                );
+              },
+              fieldViewBuilder:
+                  (context, controller, focusNode, onFieldSubmitted) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryDark.withValues(
+                              alpha: 0.04,
+                            ),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: _inputDecoration(
+                          'Search Product to add',
+                          Icons.inventory_2_outlined,
+                          suffixIcon: _isSearchingProduct
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
-                                ],
-                              ),
-                              child: TextFormField(
-                                controller: controller,
-                                focusNode: focusNode,
-                                style: const TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
-                                decoration: _inputDecoration(
-                                  'Search Customer by Name',
-                                  Icons.search,
-                                ),
-                              ),
-                            );
-                          },
-                    )
-                  else
-                    _buildSelectedCustomerCard(),
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+            ),
 
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('Add Products / Services'),
-                  Autocomplete<ProductModel>(
-                    optionsBuilder: (TextEditingValue textEditingValue) async {
-                      if (textEditingValue.text.isEmpty)
-                        return const Iterable<ProductModel>.empty();
-                      try {
-                        final productService = ProductService();
-                        final products = await productService.searchProducts(textEditingValue.text);
-                        return products;
-                      } catch (e) {
-                        return const Iterable<ProductModel>.empty();
-                      }
-                    },
-                    displayStringForOption: (ProductModel option) =>
-                        option.name,
-                    onSelected: (ProductModel selection) {
-                      _addProduct(selection);
-                    },
-                    fieldViewBuilder:
-                        (context, controller, focusNode, onFieldSubmitted) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primaryDark.withOpacity(0.04),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
+            const SizedBox(height: 16),
+            Autocomplete<ServiceModel>(
+              optionsBuilder: (TextEditingValue textEditingValue) async {
+                if (textEditingValue.text.isEmpty)
+                  return const Iterable<ServiceModel>.empty();
+                setState(() => _isSearchingService = true);
+                try {
+                  final serviceService = ServiceService();
+                  final services = await serviceService.searchServices(
+                    textEditingValue.text,
+                  );
+                  setState(() => _isSearchingService = false);
+                  return services;
+                } catch (e) {
+                  setState(() => _isSearchingService = false);
+                  return const Iterable<ServiceModel>.empty();
+                }
+              },
+              displayStringForOption: (ServiceModel option) =>
+                  option.servicename,
+              onSelected: (ServiceModel selection) {
+                _addService(selection);
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return _buildOptionsView<ServiceModel>(
+                  context,
+                  onSelected,
+                  options,
+                  (s) => s.servicename,
+                  (s) =>
+                      '₹ ${(s.servicecost + s.serviceproductcost).toStringAsFixed(2)}',
+                );
+              },
+              fieldViewBuilder:
+                  (context, controller, focusNode, onFieldSubmitted) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryDark.withValues(
+                              alpha: 0.04,
                             ),
-                            child: TextFormField(
-                              controller: controller,
-                              focusNode: focusNode,
-                              style: const TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
-                              decoration: _inputDecoration(
-                                'Search Product/Service to add',
-                                Icons.add_shopping_cart,
-                              ),
-                            ),
-                          );
-                        },
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: _inputDecoration(
+                          'Search Service to add',
+                          Icons.home_repair_service_outlined,
+                          suffixIcon: _isSearchingService
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+            ),
+
+            const SizedBox(height: 16),
+            if (_invoiceItems.isNotEmpty)
+              ..._invoiceItems.asMap().entries.map((entry) {
+                int idx = entry.key;
+                InvoiceItemModel item = entry.value;
+                return _buildInvoiceItemCard(idx, item);
+              }),
+
+            const SizedBox(height: 24),
+            _buildSectionTitle('Discount'),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.04),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
                   ),
+                ],
+              ),
+              child: TextFormField(
+                controller: _discountController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                onChanged: (value) {
+                  setState(() {});
+                },
+                decoration: _inputDecoration(
+                  'Discount Amount (₹)',
+                  Icons.local_offer_outlined,
+                ),
+              ),
+            ),
 
-                  const SizedBox(height: 16),
-                  if (_invoiceItems.isNotEmpty)
-                    ..._invoiceItems.asMap().entries.map((entry) {
-                      int idx = entry.key;
-                      InvoiceItemModel item = entry.value;
-                      return _buildInvoiceItemCard(idx, item);
-                    }),
+            const SizedBox(height: 24),
+            _buildSectionTitle('Tax Settings'),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.04),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: SwitchListTile(
+                title: const Text(
+                  'Apply GST (18%)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text('Calculate 18% tax on subtotal'),
+                activeTrackColor: AppColors.primary,
+                value: _applyGST,
+                onChanged: (val) => setState(() => _applyGST = val),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
 
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('Tax Settings'),
-                  Container(
+            const SizedBox(height: 32),
+            _buildSectionTitle('Additional Details'),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primaryDark.withOpacity(0.04),
+                          color: AppColors.primaryDark.withValues(alpha: 0.04),
                           blurRadius: 15,
                           offset: const Offset(0, 5),
                         ),
                       ],
                     ),
-                    child: SwitchListTile(
-                      title: const Text(
-                        'Apply GST (18%)',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    child: DropdownButtonFormField<String>(
+                      value: _paymentMethod,
+                      decoration: _inputDecoration(
+                        'Payment Method',
+                        Icons.payment,
                       ),
-                      subtitle: const Text('Calculate 18% tax on subtotal'),
-                      activeTrackColor: AppColors.primary,
-                      value: _applyGST,
-                      onChanged: (val) => setState(() => _applyGST = val),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      items: _paymentMethods.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value,
+                            style: TextStyle(overflow: TextOverflow.ellipsis),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() {
+                          _paymentMethod = newValue!;
+                        });
+                      },
                     ),
                   ),
-
-
-
-                  const SizedBox(height: 32),
-                  // Total Summary
-                  Container(
-                    padding: const EdgeInsets.all(20),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Container(
                     decoration: BoxDecoration(
-                      gradient: AppColors.waterGradient,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primaryLight.withAlpha(76),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
+                          color: AppColors.primaryDark.withValues(alpha: 0.04),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        _buildSummaryRow(
-                          'Subtotal',
-                          '₹ ${subtotal.toStringAsFixed(2)}',
-                        ),
-                        if (_applyGST) ...[
-                          const SizedBox(height: 8),
-                          _buildSummaryRow(
-                            'CGST (9%)',
-                            '₹ ${cgst.toStringAsFixed(2)}',
-                          ),
-                          const SizedBox(height: 8),
-                          _buildSummaryRow(
-                            'SGST (9%)',
-                            '₹ ${sgst.toStringAsFixed(2)}',
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        const Divider(color: Colors.white54),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Grand Total',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '₹ ${grandTotal.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    child: DropdownButtonFormField<String>(
+                      value: _paymentStatus,
+                      decoration: _inputDecoration(
+                        'Payment Status',
+                        Icons.info_outline,
+                      ),
+                      items: _paymentStatuses.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() {
+                          _paymentStatus = newValue!;
+                        });
+                      },
                     ),
                   ),
-
-                  const SizedBox(height: 32),
-                  BlocConsumer<InvoiceCubit, InvoiceState>(
-                    listener: (context, state) {
-                      if (state is InvoiceAdded) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Invoice saved!'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
-                        context.pop();
-                      } else if (state is InvoiceAddError) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(state.message),
-                            backgroundColor: AppColors.error,
-                          ),
-                        );
-                      }
-                    },
-                    builder: (context, state) {
-                      return GradientButton(
-                        text: 'Save Invoice',
-                        icon: Icons.save,
-                        isLoading: state is InvoiceAdding,
-                        onPressed: state is InvoiceAdding
-                            ? () {}
-                            : () {
-                                if (_selectedCustomer == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please select a customer!',
-                                      ),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                  return;
-                                }
-                                if (_invoiceItems.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please add at least one product!',
-                                      ),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                final invoice = InvoiceModel(
-                                  invoiceDate: DateTime.now().toIso8601String().split('T')[0],
-                                  type: _applyGST ? 'Tax Invoice' : 'Bill of Supply',
-                                  customerData: {
-                                    'id': _selectedCustomer!.id,
-                                    'name': _selectedCustomer!.fullName,
-                                    'phone': _selectedCustomer!.phoneNumber,
-                                    'address': _selectedCustomer!.address,
-                                  },
-                                  items: _invoiceItems,
-                                  subtotal: subtotal,
-                                  totalDiscount: totalDiscount,
-                                  taxableAmount: taxableAmount,
-                                  isGstApplied: _applyGST,
-                                  cgst: cgst,
-                                  sgst: sgst,
-                                  igst: igst,
-                                  roundOff: 0.0,
-                                  grandTotal: grandTotal,
-                                );
-
-                                context.read<InvoiceCubit>().addInvoice(
-                                  invoice,
-                                );
-                              },
-                      );
-                    },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.04),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
                   ),
-                  const SizedBox(height: 40),
+                ],
+              ),
+              child: TextFormField(
+                controller: _productNotesController,
+                maxLines: 2,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: _inputDecoration(
+                  'Product Notes',
+                  Icons.note_add_outlined,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.04),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: TextFormField(
+                controller: _serviceNotesController,
+                maxLines: 2,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: _inputDecoration(
+                  'Service Notes',
+                  Icons.home_repair_service,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.04),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: TextFormField(
+                controller: _termsNotesController,
+                maxLines: 2,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: _inputDecoration('Terms & Conditions', Icons.gavel),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+            // Total Summary
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: AppColors.waterGradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryLight.withAlpha(76),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildSummaryRow(
+                    'Subtotal',
+                    '₹ ${subtotal.toStringAsFixed(2)}',
+                  ),
+                  if (totalDiscount > 0) ...[
+                    const SizedBox(height: 8),
+                    _buildSummaryRow(
+                      'Discount',
+                      '- ₹ ${totalDiscount.toStringAsFixed(2)}',
+                    ),
+                  ],
+                  if (_applyGST) ...[
+                    const SizedBox(height: 8),
+                    _buildSummaryRow(
+                      'CGST (9%)',
+                      '₹ ${cgst.toStringAsFixed(2)}',
+                    ),
+                    const SizedBox(height: 8),
+                    _buildSummaryRow(
+                      'SGST (9%)',
+                      '₹ ${sgst.toStringAsFixed(2)}',
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  const Divider(color: Colors.white54),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Grand Total',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '₹ ${grandTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
+
+            const SizedBox(height: 32),
+            BlocConsumer<InvoiceCubit, InvoiceState>(
+              listener: (context, state) {
+                if (state is InvoiceAdded) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Invoice saved!'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  context.pop();
+                } else if (state is InvoiceAddError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                return GradientButton(
+                  text: 'Save Invoice',
+                  icon: Icons.save,
+                  isLoading: state is InvoiceAdding,
+                  onPressed: state is InvoiceAdding
+                      ? () {}
+                      : () {
+                          if (_selectedCustomer == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please select a customer!'),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            return;
+                          }
+                          if (_invoiceItems.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please add at least one product!',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            return;
+                          }
+
+                          final invoice = InvoiceModel(
+                            invoiceDate: DateTime.now().toIso8601String().split(
+                              'T',
+                            )[0],
+                            type: _applyGST ? 'Tax Invoice' : 'Bill of Supply',
+                            customerData: _selectedCustomer!.toJson(),
+                            items: _invoiceItems,
+                            subtotal: subtotal,
+                            totalDiscount: totalDiscount,
+                            taxableAmount: taxableAmount,
+                            isGstApplied: _applyGST,
+                            cgst: cgst,
+                            sgst: sgst,
+                            igst: igst,
+                            roundOff: 0.0,
+                            grandTotal: grandTotal,
+                            paymentmethod: _paymentMethod,
+                            paymentstatus: _paymentStatus,
+                            termsnotes: _termsNotesController.text,
+                            productnotes: _productNotesController.text,
+                            servicenotes: _serviceNotesController.text,
+                          );
+
+                          context.read<InvoiceCubit>().addInvoice(invoice);
+                        },
+                );
+              },
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
     );
   }
 
@@ -389,7 +796,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.04),
+            color: AppColors.primaryDark.withValues(alpha: 0.04),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -450,7 +857,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.04),
+            color: AppColors.primaryDark.withValues(alpha: 0.04),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -539,11 +946,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(
+    String label,
+    IconData icon, {
+    Widget? suffixIcon,
+  }) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+      labelStyle: const TextStyle(
+        color: AppColors.textSecondary,
+        fontWeight: FontWeight.w500,
+      ),
       prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: AppColors.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -579,6 +994,69 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOptionsView<T extends Object>(
+    BuildContext context,
+    AutocompleteOnSelected<T> onSelected,
+    Iterable<T> options,
+    String Function(T) displayString,
+    String Function(T)? subtitleString,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        elevation: 8.0,
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        child: Container(
+          width: MediaQuery.of(context).size.width - 40,
+          constraints: const BoxConstraints(maxHeight: 250),
+          child: ListView.separated(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            itemCount: options.length,
+            separatorBuilder: (context, index) =>
+                const Divider(height: 1, color: Colors.black12),
+            itemBuilder: (BuildContext context, int index) {
+              final T option = options.elementAt(index);
+              return InkWell(
+                onTap: () => onSelected(option),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 12.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayString(option),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (subtitleString != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitleString(option),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }

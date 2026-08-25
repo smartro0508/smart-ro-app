@@ -7,6 +7,7 @@ import '../widgets/gradient_button.dart';
 import '../controller/setting_cubit.dart';
 import '../controller/setting_state.dart';
 import '../models/setting_model.dart';
+import '../widgets/premium_animated_app_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -83,8 +84,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+      appBar: PremiumAnimatedAppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/app-logo.png', height: 28),
+            const SizedBox(width: 8),
+            const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          ],
+        ),
         centerTitle: true,
       ),
       body: BlocListener<SettingCubit, SettingState>(

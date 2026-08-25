@@ -9,17 +9,33 @@ class MainScreen extends StatelessWidget {
 
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
+
     if (location.startsWith('/invoices')) return 0;
     if (location.startsWith('/customers')) return 1;
-    if (location.startsWith('/settings')) return 2;
+    if (location.startsWith('/products')) return 2;
+    if (location.startsWith('/services')) return 3;
+    if (location.startsWith('/settings')) return 4;
+
     return 0;
   }
 
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
-      case 0: context.go('/invoices'); break;
-      case 1: context.go('/customers'); break;
-      case 2: context.go('/settings'); break;
+      case 0:
+        context.go('/invoices');
+        break;
+      case 1:
+        context.go('/customers');
+        break;
+      case 2:
+        context.go('/products');
+        break;
+      case 3:
+        context.go('/services');
+        break;
+      case 4:
+        context.go('/settings');
+        break;
     }
   }
 
@@ -28,77 +44,209 @@ class MainScreen extends StatelessWidget {
     final int currentIndex = _calculateSelectedIndex(context);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: child,
+
       bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          child: Container(
-            height: 72,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(36),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryDark.withOpacity(0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(context, 0, currentIndex, Icons.receipt_long_outlined, Icons.receipt_long, 'Invoices'),
-                _buildNavItem(context, 1, currentIndex, Icons.people_outline, Icons.people, 'Customers'),
-                _buildNavItem(context, 2, currentIndex, Icons.settings_outlined, Icons.settings, 'Settings'),
-              ],
-            ),
+        minimum: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+        child: _buildBottomNavigation(context, currentIndex),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigation(BuildContext context, int currentIndex) {
+    return Container(
+      height: 74,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(26),
+
+        border: Border.all(
+          color: AppColors.primaryDark.withValues(alpha: 0.06),
+          width: 1,
+        ),
+
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.08),
+            blurRadius: 30,
+            spreadRadius: 0,
+            offset: const Offset(0, 12),
           ),
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildNavItem(
+                context: context,
+                index: 0,
+                currentIndex: currentIndex,
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long_rounded,
+                label: 'Invoices',
+              ),
+            ),
+
+            Expanded(
+              child: _buildNavItem(
+                context: context,
+                index: 1,
+                currentIndex: currentIndex,
+                icon: Icons.people_outline_rounded,
+                activeIcon: Icons.people_rounded,
+                label: 'Customers',
+              ),
+            ),
+
+            Expanded(
+              child: _buildNavItem(
+                context: context,
+                index: 2,
+                currentIndex: currentIndex,
+                icon: Icons.inventory_2_outlined,
+                activeIcon: Icons.inventory_2_rounded,
+                label: 'Products',
+              ),
+            ),
+
+            Expanded(
+              child: _buildNavItem(
+                context: context,
+                index: 3,
+                currentIndex: currentIndex,
+                icon: Icons.home_repair_service_outlined,
+                activeIcon: Icons.home_repair_service_rounded,
+                label: 'Services',
+              ),
+            ),
+
+            Expanded(
+              child: _buildNavItem(
+                context: context,
+                index: 4,
+                currentIndex: currentIndex,
+                icon: Icons.settings_outlined,
+                activeIcon: Icons.settings_rounded,
+                label: 'Settings',
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(BuildContext context, int index, int currentIndex, IconData icon, IconData activeIcon, String label) {
-    final isSelected = index == currentIndex;
+  Widget _buildNavItem({
+    required BuildContext context,
+    required int index,
+    required int currentIndex,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+  }) {
+    final bool isSelected = index == currentIndex;
 
     return GestureDetector(
       onTap: () => _onItemTapped(index, context),
       behavior: HitTestBehavior.opaque,
+
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 20 : 16, vertical: 12),
+
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.10)
+              : Colors.transparent,
+
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary.withOpacity(0.6),
-              size: 26,
-            ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
-              child: SizedBox(
-                width: isSelected ? null : 0,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.primaryDark,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          return ScaleTransition(
+                            scale: animation,
+                            child: FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            ),
+                          );
+                        },
+
+                    child: Icon(
+                      isSelected ? activeIcon : icon,
+                      key: ValueKey(isSelected),
+                      size: 23,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.textSecondary.withValues(alpha: 0.65),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
                   ),
+
+                  const SizedBox(height: 4),
+
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+
+                    curve: Curves.easeOut,
+
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? AppColors.primaryDark
+                          : AppColors.textSecondary.withValues(alpha: 0.65),
+                    ),
+
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Active indicator
+            Positioned(
+              bottom: 2,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+
+                width: isSelected ? 20 : 0,
+                height: 3,
+
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),

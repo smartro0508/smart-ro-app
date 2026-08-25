@@ -6,6 +6,7 @@ import '../controller/invoice_cubit.dart';
 import '../controller/invoice_state.dart';
 import '../models/invoice_model.dart';
 import '../utils/pdf_service.dart';
+import '../widgets/premium_animated_app_bar.dart';
 
 class InvoiceListScreen extends StatefulWidget {
   const InvoiceListScreen({super.key});
@@ -19,6 +20,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String? _loadingPdfInvoiceId;
 
   @override
   void initState() {
@@ -43,24 +45,31 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: PremiumAnimatedAppBar(
         title: _isSearching
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Search invoices...',
-                  hintStyle: TextStyle(color: AppColors.textSecondary),
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                   border: InputBorder.none,
                 ),
-                style: const TextStyle(color: AppColors.primaryDark),
+                style: const TextStyle(color: Colors.white),
                 onChanged: (value) {
                   setState(() {
                     _searchQuery = value.toLowerCase();
                   });
                 },
               )
-            : const Text('Invoices', style: TextStyle(fontWeight: FontWeight.bold)),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/app-logo.png', height: 28),
+                  const SizedBox(width: 8),
+                  const Text('Invoices', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
+              ),
         centerTitle: !_isSearching,
         leading: _isSearching
             ? IconButton(
@@ -295,7 +304,23 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildInvoiceIconButton(Icons.share_outlined, AppColors.info, () => PdfService.shareInvoicePdf(invoice)),
+                        if (_loadingPdfInvoiceId == invoice.id)
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: SizedBox(
+                              width: 18, height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.info),
+                            ),
+                          )
+                        else
+                          _buildInvoiceIconButton(Icons.share_outlined, AppColors.info, () async {
+                            setState(() => _loadingPdfInvoiceId = invoice.id);
+                            try {
+                              await PdfService.shareInvoicePdf(invoice);
+                            } finally {
+                              if (mounted) setState(() => _loadingPdfInvoiceId = null);
+                            }
+                          }),
                       ],
                     )
                   ],

@@ -53,6 +53,11 @@ class InvoiceModel {
   final double igst;
   final double roundOff;
   final double grandTotal;
+  final String? paymentmethod;
+  final String? paymentstatus;
+  final String? termsnotes;
+  final String? productnotes;
+  final String? servicenotes;
 
   InvoiceModel({
     this.id,
@@ -70,6 +75,11 @@ class InvoiceModel {
     required this.igst,
     this.roundOff = 0,
     required this.grandTotal,
+    this.paymentmethod,
+    this.paymentstatus,
+    this.termsnotes,
+    this.productnotes,
+    this.servicenotes,
   });
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
@@ -88,6 +98,11 @@ class InvoiceModel {
         customerDataRaw = jsonDecode(customerDataRaw);
       } catch (_) {}
     }
+    
+    if (customerDataRaw is List && customerDataRaw.isNotEmpty) {
+      customerDataRaw = customerDataRaw.first;
+    }
+
     Map<String, dynamic> customerDataMap = <String, dynamic>{};
     if (customerDataRaw is Map) {
       customerDataMap = Map<String, dynamic>.from(customerDataRaw);
@@ -109,6 +124,11 @@ class InvoiceModel {
       igst: json['igst'] != null ? double.parse(json['igst'].toString()) : 0.0,
       roundOff: json['roundOff'] != null ? double.parse(json['roundOff'].toString()) : 0.0,
       grandTotal: json['grandTotal'] != null ? double.parse(json['grandTotal'].toString()) : 0.0,
+      paymentmethod: json['paymentmethod'],
+      paymentstatus: json['paymentstatus'],
+      termsnotes: json['termsnotes'],
+      productnotes: json['productnotes'],
+      servicenotes: json['servicenotes'],
     );
   }
 
@@ -129,6 +149,11 @@ class InvoiceModel {
       'igst': igst,
       'roundOff': roundOff,
       'grandTotal': grandTotal,
+      if (paymentmethod != null) 'paymentmethod': paymentmethod,
+      if (paymentstatus != null) 'paymentstatus': paymentstatus,
+      if (termsnotes != null) 'termsnotes': termsnotes,
+      if (productnotes != null) 'productnotes': productnotes,
+      if (servicenotes != null) 'servicenotes': servicenotes,
     };
   }
 }

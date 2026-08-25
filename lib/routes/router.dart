@@ -8,6 +8,12 @@ import '../screens/create_invoice_screen.dart';
 import '../screens/customer_list_screen.dart';
 import '../screens/customer_onboarding_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/product_list_screen.dart';
+import '../screens/service_list_screen.dart';
+import '../screens/product_form_screen.dart';
+import '../screens/service_form_screen.dart';
+import '../models/product_model.dart';
+import '../models/service_model.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -39,6 +45,14 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => const CustomerListScreen(),
         ),
         GoRoute(
+          path: '/products',
+          builder: (context, state) => const ProductListScreen(),
+        ),
+        GoRoute(
+          path: '/services',
+          builder: (context, state) => const ServiceListScreen(),
+        ),
+        GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
         ),
@@ -48,6 +62,22 @@ final GoRouter appRouter = GoRouter(
       path: '/add-customer',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const CustomerOnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/add-product',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final product = state.extra as ProductModel?;
+        return ProductFormScreen(product: product);
+      },
+    ),
+    GoRoute(
+      path: '/add-service',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final service = state.extra as ServiceModel?;
+        return ServiceFormScreen(service: service);
+      },
     ),
   ],
 );
