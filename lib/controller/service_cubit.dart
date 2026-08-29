@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 import '../models/service_model.dart';
 import '../service/service_service.dart';
 import 'service_state.dart';
@@ -30,10 +29,10 @@ class ServiceCubit extends Cubit<ServiceState> {
     emit(ServiceLoaded(filtered));
   }
 
-  Future<void> addService(ServiceModel service, {XFile? imageFile}) async {
+  Future<void> addService(ServiceModel service) async {
     emit(ServiceAdding());
     try {
-      await _serviceService.createService(service, imageFile: imageFile);
+      await _serviceService.createService(service);
       emit(ServiceAdded());
       getServices(refresh: true);
     } catch (e) {
@@ -41,10 +40,10 @@ class ServiceCubit extends Cubit<ServiceState> {
     }
   }
 
-  Future<void> updateService(ServiceModel service, {XFile? imageFile}) async {
+  Future<void> updateService(ServiceModel service) async {
     emit(ServiceAdding());
     try {
-      await _serviceService.updateService(service, imageFile: imageFile);
+      await _serviceService.updateService(service);
       emit(ServiceAdded());
       getServices(refresh: true);
     } catch (e) {

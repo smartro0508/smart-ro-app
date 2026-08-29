@@ -1,6 +1,11 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/gradient_button.dart';
@@ -75,6 +80,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQrCodeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Shop QR Code', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 200.0,
+              height: 200.0,
+              child: QrImageView(
+                data: 'https://www.smartro.shop/',
+                version: QrVersions.auto,
+                size: 200.0,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Scan to visit our shop', style: TextStyle(color: AppColors.textSecondary)),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(),
+            child: const Text('Close', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              try {
+                final qrValidationResult = QrValidator.validate(
+                  data: 'https://www.smartro.shop/',
+                  version: QrVersions.auto,
+                  errorCorrectionLevel: QrErrorCorrectLevel.L,
+                );
+
+                if (qrValidationResult.status == QrValidationStatus.valid) {
+                  final qrCode = qrValidationResult.qrCode;
+                  final painter = QrPainter.withQr(
+                    qr: qrCode!,
+                    color: const Color(0xFF000000),
+                    emptyColor: const Color(0xFFFFFFFF),
+                    gapless: true,
+                  );
+
+                  final picData = await painter.toImageData(2048, format: ui.ImageByteFormat.png);
+                  if (picData != null) {
+                    final tempDir = await getTemporaryDirectory();
+                    final file = File('${tempDir.path}/smartro_shop_qr.png');
+                    await file.writeAsBytes(picData.buffer.asUint8List());
+                    
+                    await Share.shareXFiles(
+                      [XFile(file.path)], 
+                      text: 'Check out our shop at https://www.smartro.shop/'
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to share QR code: $e')),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.share, size: 18),
+            label: const Text('Share Link'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
         ],
       ),
@@ -201,6 +285,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             
             const SizedBox(height: 48),
             
+            ElevatedButton.icon(
+              onPressed: () => _showQrCodeDialog(context),
+              icon: const Icon(Icons.qr_code_2),
+              label: const Text('Share Shop Link (QR)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary.withAlpha(25),
+                foregroundColor: AppColors.primary,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             ElevatedButton.icon(
               onPressed: () => _showLogoutDialog(context),
               icon: const Icon(Icons.logout),

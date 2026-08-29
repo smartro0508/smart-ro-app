@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 import '../models/product_model.dart';
 import '../service/product_service.dart';
 import 'product_state.dart';
@@ -30,10 +29,10 @@ class ProductCubit extends Cubit<ProductState> {
     emit(ProductLoaded(filtered));
   }
 
-  Future<void> addProduct(ProductModel product, {XFile? imageFile}) async {
+  Future<void> addProduct(ProductModel product) async {
     emit(ProductAdding());
     try {
-      await _productService.createProduct(product, imageFile: imageFile);
+      await _productService.createProduct(product);
       emit(ProductAdded());
       getProducts(refresh: true);
     } catch (e) {
@@ -41,10 +40,10 @@ class ProductCubit extends Cubit<ProductState> {
     }
   }
 
-  Future<void> updateProduct(ProductModel product, {XFile? imageFile}) async {
+  Future<void> updateProduct(ProductModel product) async {
     emit(ProductAdding());
     try {
-      await _productService.updateProduct(product, imageFile: imageFile);
+      await _productService.updateProduct(product);
       emit(ProductAdded());
       getProducts(refresh: true);
     } catch (e) {

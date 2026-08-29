@@ -1,15 +1,12 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/gradient_button.dart';
 import '../controller/service_cubit.dart';
 import '../controller/service_state.dart';
 import '../models/service_model.dart';
-import '../utils/api_constants.dart';
 
 class ServiceFormScreen extends StatefulWidget {
   final ServiceModel? service;
@@ -26,12 +23,6 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
   final _descController = TextEditingController();
   final _costController = TextEditingController();
   final _productCostController = TextEditingController();
-  final _keypointsController = TextEditingController();
-  
-  String _status = 'active';
-  
-  XFile? _imageFile;
-  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -42,8 +33,6 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
       _descController.text = s.description ?? '';
       _costController.text = s.servicecost.toString();
       _productCostController.text = s.serviceproductcost.toString();
-      _keypointsController.text = s.keypoints?.join('\n') ?? '';
-      _status = s.status == 'inactive' ? 'inactive' : 'active';
     }
   }
 
@@ -53,17 +42,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
     _descController.dispose();
     _costController.dispose();
     _productCostController.dispose();
-    _keypointsController.dispose();
     super.dispose();
-  }
-  
-  Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _imageFile = picked;
-      });
-    }
   }
 
   @override
@@ -79,42 +58,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20.0),
           children: [
-            _buildSectionTitle('Service Image'),
-            Center(
-              child: GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.primaryLight, width: 2),
-                    image: _imageFile != null
-                        ? DecorationImage(image: FileImage(File(_imageFile!.path)), fit: BoxFit.cover)
-                        : (isEditing && widget.service?.image != null
-                            ? DecorationImage(
-                                image: NetworkImage('${ApiConstants.imageBaseUrl}${widget.service!.image}'),
-                                fit: BoxFit.cover,
-                              )
-                            : null),
-                  ),
-                  child: (_imageFile == null && !(isEditing && widget.service?.image != null))
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate_outlined, color: AppColors.primary, size: 40),
-                            SizedBox(height: 8),
-                            Text('Upload Image', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                          ],
-                        )
-                      : null,
-                ),
-              ),
-            ),
-              
-            const SizedBox(height: 32),
-            _buildSectionTitle('Basic Information'),
+            _buildSectionTitle('Service Information'),
             CustomTextField(
               label: 'Service Name *', 
               icon: Icons.home_repair_service_outlined,
@@ -128,7 +72,9 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
               controller: _descController,
               maxLines: 3,
             ),
-            const SizedBox(height: 16),
+            
+            const SizedBox(height: 32),
+            _buildSectionTitle('Pricing Details'),
             Row(
               children: [
                 Expanded(
@@ -161,36 +107,7 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                 ),
               ],
             ),
-            
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: 'Key Points (One per line)', 
-              icon: Icons.list_outlined,
-              controller: _keypointsController,
-              maxLines: 3,
-            ),
-            
-            const SizedBox(height: 32),
-            _buildSectionTitle('Publish Status'),
-            DropdownButtonFormField<String>(
-              value: _status,
-              decoration: InputDecoration(
-                labelText: 'Status',
-                prefixIcon: const Icon(Icons.public, color: AppColors.primary),
-                filled: true,
-                fillColor: AppColors.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'active', child: Text('Active')),
-                DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-              ],
-              onChanged: (v) => setState(() => _status = v!),
-            ),
-            
+
             const SizedBox(height: 40),
             BlocConsumer<ServiceCubit, ServiceState>(
               listener: (context, state) {
@@ -220,9 +137,6 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                   isLoading: state is ServiceAdding,
                   onPressed: state is ServiceAdding ? () {} : () {
                     if (_formKey.currentState!.validate()) {
-                      
-                      final keypoints = _keypointsController.text.split('\n').where((s) => s.trim().isNotEmpty).toList();
-
                       final service = ServiceModel(
                         id: isEditing ? widget.service!.id : null,
                         servicename: _nameController.text.trim(),
@@ -231,14 +145,12 @@ class _ServiceFormScreenState extends State<ServiceFormScreen> {
                         serviceproductcost: _productCostController.text.trim().isEmpty 
                           ? 0.0 
                           : double.parse(_productCostController.text.trim()),
-                        keypoints: keypoints,
-                        status: _status,
                       );
                       
                       if (isEditing) {
-                        context.read<ServiceCubit>().updateService(service, imageFile: _imageFile);
+                        context.read<ServiceCubit>().updateService(service);
                       } else {
-                        context.read<ServiceCubit>().addService(service, imageFile: _imageFile);
+                        context.read<ServiceCubit>().addService(service);
                       }
                     }
                   },

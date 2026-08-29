@@ -144,192 +144,285 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                   }
                   return ListView.separated(
                     controller: _scrollController,
-                    padding: EdgeInsets.all(15),
+                    padding: const EdgeInsets.fromLTRB(15, 15, 15, 80),
                     itemCount: customers.length + (state.hasReachedMax ? 0 : 1),
                     separatorBuilder: (context, index) =>
-                        SizedBox(height: 10.0),
+                        const SizedBox(height: 10),
                     itemBuilder: (context, index) {
+                      // Pagination loader
                       if (index >= customers.length) {
                         return const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Center(child: CircularProgressIndicator()),
+                          padding: EdgeInsets.all(20),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                              ),
+                            ),
+                          ),
                         );
                       }
+
                       final customer = customers[index];
+
+                      final String customerName =
+                          customer.fullName.trim().isEmpty
+                          ? 'Unknown Customer'
+                          : customer.fullName.trim();
+
+                      final String initial = customerName
+                          .substring(0, 1)
+                          .toUpperCase();
+
+                      final bool hasPhone =
+                          customer.phoneNumber != null &&
+                          customer.phoneNumber!.trim().isNotEmpty;
+
+                      final bool hasLocation =
+                          (customer.city != null &&
+                              customer.city!.trim().isNotEmpty) ||
+                          (customer.state != null &&
+                              customer.state!.trim().isNotEmpty);
+
+                      final String location = [
+                        if (customer.city != null &&
+                            customer.city!.trim().isNotEmpty)
+                          customer.city!.trim(),
+                        if (customer.state != null &&
+                            customer.state!.trim().isNotEmpty)
+                          customer.state!.trim(),
+                      ].join(', ');
+
                       return Container(
                         margin: EdgeInsets.only(
-                          bottom: customers.length - 1 == index ? 60 : 0,
+                          bottom: index == customers.length - 1 ? 10 : 0,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: AppColors.textSecondary.withValues(
+                              alpha: 0.09,
+                            ),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.primaryDark.withValues(
-                                alpha: 0.05,
+                                alpha: 0.035,
                               ),
-                              blurRadius: 15,
+                              blurRadius: 16,
                               offset: const Offset(0, 5),
                             ),
                           ],
-                          border: Border.all(
-                            color: AppColors.textSecondary.withValues(
-                              alpha: 0.1,
-                            ),
-                          ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Stack(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
                             children: [
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                width: 4,
-                                child: Container(
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.15,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            border: Border.all(
-                                              color: AppColors.primary
-                                                  .withValues(alpha: 0.3),
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              customer.fullName
-                                                  .substring(0, 1)
-                                                  .toUpperCase(),
-                                              style: const TextStyle(
-                                                color: AppColors.primary,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                customer.fullName,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                  color: AppColors.textPrimary,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              if (customer.city != null &&
-                                                  customer.city!.isNotEmpty)
-                                                Row(
-                                                  children: [
-                                                    const Icon(
-                                                      Icons
-                                                          .location_on_outlined,
-                                                      size: 14,
-                                                      color: AppColors
-                                                          .textSecondary,
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      '${customer.city}${customer.state != null ? ', ${customer.state}' : ''}',
-                                                      style: const TextStyle(
-                                                        color: AppColors
-                                                            .textSecondary,
-                                                        fontSize: 13,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                              // ───────────────── CUSTOMER INFO ─────────────────
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Avatar
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.10,
+                                      ),
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
-                                    if (customer.phoneNumber != null &&
-                                        customer.phoneNumber!.isNotEmpty) ...[
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12.0,
-                                        ),
-                                        child: Divider(
-                                          height: 1,
-                                          color: AppColors.textSecondary
-                                              .withValues(alpha: 0.1),
+                                    child: Center(
+                                      child: Text(
+                                        initial,
+                                        style: const TextStyle(
+                                          color: AppColors.primary,
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          _buildActionButton(
-                                            Icons.phone_outlined,
-                                            'Call',
-                                            AppColors.primary,
-                                            () async {
-                                              final url = Uri.parse(
-                                                'tel:${customer.phoneNumber}',
-                                              );
-                                              if (await canLaunchUrl(url)) {
-                                                await launchUrl(url);
-                                              }
-                                            },
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 13),
+
+                                  // Name + location
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          customerName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.textPrimary,
                                           ),
-                                          const SizedBox(width: 8),
-                                          _buildActionButton(
-                                            Icons.chat_bubble_outline,
-                                            'WhatsApp',
-                                            AppColors.success,
-                                            () async {
-                                              final cleanPhone =
-                                                  customer.phoneNumber
-                                                      ?.replaceAll(
-                                                        RegExp(r'[^\d]'),
-                                                        '',
-                                                      ) ??
-                                                  '';
-                                              final url = Uri.parse(
-                                                'https://wa.me/$cleanPhone',
-                                              );
-                                              if (await canLaunchUrl(url)) {
-                                                await launchUrl(
-                                                  url,
-                                                  mode: LaunchMode
-                                                      .externalApplication,
-                                                );
-                                              }
-                                            },
+                                        ),
+
+                                        if (hasLocation) ...[
+                                          const SizedBox(height: 6),
+
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.location_on_outlined,
+                                                size: 13,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  location,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 11.5,
+                                                    fontWeight: FontWeight.w500,
+                                                    color:
+                                                        AppColors.textSecondary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Customer badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 9,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.07,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      'CUSTOMER',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // ───────────────── CONTACT SECTION ─────────────────
+                              if (hasPhone) ...[
+                                const SizedBox(height: 14),
+
+                                Container(
+                                  height: 1,
+                                  color: AppColors.textSecondary.withValues(
+                                    alpha: 0.07,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                Row(
+                                  children: [
+                                    // Phone number
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary
+                                                  .withValues(alpha: 0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(9),
+                                            ),
+                                            child: const Icon(
+                                              Icons.phone_outlined,
+                                              size: 15,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 9),
+                                          Expanded(
+                                            child: Text(
+                                              customer.phoneNumber!,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
-                                    ],
+                                    ),
+
+                                    const SizedBox(width: 8),
+
+                                    // Call
+                                    _buildActionButton(
+                                      Icons.phone_outlined,
+                                      'Call',
+                                      AppColors.primary,
+                                      () async {
+                                        final url = Uri.parse(
+                                          'tel:${customer.phoneNumber}',
+                                        );
+
+                                        if (await canLaunchUrl(url)) {
+                                          await launchUrl(url);
+                                        }
+                                      },
+                                    ),
+
+                                    const SizedBox(width: 7),
+
+                                    // WhatsApp
+                                    _buildActionButton(
+                                      Icons.chat_bubble_outline_rounded,
+                                      'WhatsApp',
+                                      AppColors.success,
+                                      () async {
+                                        final cleanPhone =
+                                            customer.phoneNumber?.replaceAll(
+                                              RegExp(r'[^\d]'),
+                                              '',
+                                            ) ??
+                                            '';
+
+                                        final url = Uri.parse(
+                                          'https://wa.me/$cleanPhone',
+                                        );
+
+                                        if (await canLaunchUrl(url)) {
+                                          await launchUrl(
+                                            url,
+                                            mode:
+                                                LaunchMode.externalApplication,
+                                          );
+                                        }
+                                      },
+                                    ),
                                   ],
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),

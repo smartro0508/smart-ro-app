@@ -60,4 +60,34 @@ class InvoiceService {
       throw Exception('Network error occurred');
     }
   }
+
+  Future<InvoiceModel> updateInvoice(String id, InvoiceModel invoice) async {
+    try {
+      final response = await _dio.post('/invoices/update/$id', data: invoice.toJson());
+      if (response.statusCode == 200) {
+        return InvoiceModel.fromJson(response.data['data']);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to update invoice');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response?.data['message'] ?? 'Failed to update invoice');
+      }
+      throw Exception('Network error occurred');
+    }
+  }
+
+  Future<void> deleteInvoice(String id) async {
+    try {
+      final response = await _dio.post('/invoices/delete/$id');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception(response.data['message'] ?? 'Failed to delete invoice');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response?.data['message'] ?? 'Failed to delete invoice');
+      }
+      throw Exception('Network error occurred');
+    }
+  }
 }

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -51,20 +52,20 @@ class PdfService {
       } else {
         word = units[n % 10];
         n = n ~/ 10;
-        word = tens[n % 10] + (word.isNotEmpty ? ' ' + word : '');
+        word = tens[n % 10] + (word.isNotEmpty ? ' $word' : '');
         n = n ~/ 10;
       }
       if (n == 0) return word;
-      return units[n] + ' Hundred' + (word.isNotEmpty ? ' and ' + word : '');
+      return '${units[n]} Hundred${word.isNotEmpty ? ' and $word' : ''}';
     }
 
     String result = '';
     if (number >= 10000000) {
-      result += convertUnderOneThousand(number ~/ 10000000) + ' Crore ';
+      result += '${convertUnderOneThousand(number ~/ 10000000)} Crore ';
       number %= 10000000;
     }
     if (number >= 100000) {
-      result += convertUnderOneThousand(number ~/ 100000) + ' Lakh ';
+      result += '${convertUnderOneThousand(number ~/ 100000)} Lakh ';
       number %= 100000;
     }
     if (number >= 1000) {
@@ -77,7 +78,7 @@ class PdfService {
     return result.trim();
   }
 
-  static Future<void> shareInvoicePdf(InvoiceModel invoice) async {
+  static Future<Uint8List> generateInvoicePdfBytes(InvoiceModel invoice) async {
     final pdf = pw.Document();
 
     final imageBytes = await rootBundle.load('assets/app-logo.png');
@@ -89,20 +90,33 @@ class PdfService {
     final sigBytes = await rootBundle.load('assets/signature.png');
     final signatureImage = pw.MemoryImage(sigBytes.buffer.asUint8List());
 
+    final lgBytes = await rootBundle.load('assets/lg.png');
+    final lgLogo = pw.MemoryImage(lgBytes.buffer.asUint8List());
+
+    final aquaBytes = await rootBundle.load('assets/aqua.png');
+    final aquaLogo = pw.MemoryImage(aquaBytes.buffer.asUint8List());
+
+    final hawellsBytes = await rootBundle.load('assets/hawells.png');
+    final hawellsLogo = pw.MemoryImage(hawellsBytes.buffer.asUint8List());
+
+    final vgaurdBytes = await rootBundle.load('assets/v-gaurd.png');
+    final vgaurdLogo = pw.MemoryImage(vgaurdBytes.buffer.asUint8List());
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(0),
         header: (context) => _buildHeader(invoice, appLogo),
-        footer: (context) => _buildFooter(),
+        footer: (context) =>
+            _buildFooter(lgLogo, aquaLogo, hawellsLogo, vgaurdLogo),
         build: (context) => [
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(horizontal: 40),
             child: pw.Column(
               children: [
-                pw.SizedBox(height: 30),
+                pw.SizedBox(height: 20),
                 _buildCustomerInfo(invoice),
-                pw.SizedBox(height: 30),
+                pw.SizedBox(height: 20),
               ],
             ),
           ),
@@ -119,12 +133,12 @@ class PdfService {
                     _buildRightTotals(invoice),
                   ],
                 ),
-                pw.SizedBox(height: 30),
+                pw.SizedBox(height: 20),
                 pw.Align(
                   alignment: pw.Alignment.centerRight,
                   child: _buildSignature(signatureImage, smartroLogo),
                 ),
-                pw.SizedBox(height: 40),
+                pw.SizedBox(height: 10),
               ],
             ),
           ),
@@ -132,8 +146,13 @@ class PdfService {
       ),
     );
 
+    return await pdf.save();
+  }
+
+  static Future<void> shareInvoicePdf(InvoiceModel invoice) async {
+    final bytes = await generateInvoicePdfBytes(invoice);
     await Printing.sharePdf(
-      bytes: await pdf.save(),
+      bytes: bytes,
       filename: 'invoice_${invoice.invoiceNumber ?? "new"}.pdf',
     );
   }
@@ -146,7 +165,7 @@ class PdfService {
       padding: const pw.EdgeInsets.only(
         left: 40,
         right: 40,
-        top: 40,
+        top: 20,
         bottom: 0,
       ),
       child: pw.Row(
@@ -159,7 +178,9 @@ class PdfService {
               pw.Image(appLogo, width: 140),
               pw.SizedBox(height: 15),
               pw.Text(
-                '9/1,sri nagar,deepam nagar 9th Street, irugur,641103',
+                invoice.isGstApplied
+                    ? 'Address: No.1/756, Adheeshwarar Nagar 3rd Street, \nAdhiyur, Kunnathur, Tiruppur - 638103'
+                    : '9/1,sri nagar,deepam nagar 9th Street, irugur,641103',
                 style: const pw.TextStyle(
                   fontSize: 10,
                   color: PdfColors.grey700,
@@ -179,9 +200,9 @@ class PdfService {
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
               pw.Text(
-                invoice.isGstApplied ? 'TAX INVOICE' : 'INVOICE',
+                invoice.isGstApplied ? 'TAX INVOICE' : 'PROFORMA INVOICE',
                 style: pw.TextStyle(
-                  fontSize: invoice.isGstApplied ? 34 : 40,
+                  fontSize: invoice.isGstApplied ? 20 : 20,
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColor.fromHex('#5A9BD5'),
                 ),
@@ -203,19 +224,31 @@ class PdfService {
   }
 
   static pw.Widget _buildCustomerInfo(InvoiceModel invoice) {
-    String customerName = (invoice.customerData['fullName'] ?? invoice.customerData['name'])?.toString() ?? 'Unknown Customer';
-    
+    String customerName =
+        (invoice.customerData['fullName'] ?? invoice.customerData['name'])
+            ?.toString() ??
+        'Unknown Customer';
+
     String address = invoice.customerData['address']?.toString() ?? '';
     String city = invoice.customerData['city']?.toString() ?? '';
     String state = invoice.customerData['state']?.toString() ?? '';
     String pincode = invoice.customerData['pincode']?.toString() ?? '';
-    
-    String fullAddr = address;
-    if (city.isNotEmpty && city != 'null') fullAddr += (fullAddr.isNotEmpty ? ', $city' : city);
-    if (state.isNotEmpty && state != 'null') fullAddr += (fullAddr.isNotEmpty ? ', $state' : state);
-    if (pincode.isNotEmpty && pincode != 'null') fullAddr += (fullAddr.isNotEmpty ? ' - $pincode' : pincode);
 
-    String phone = (invoice.customerData['phoneNumber'] ?? invoice.customerData['phone'])?.toString() ?? '';
+    String fullAddr = address;
+    if (city.isNotEmpty && city != 'null') {
+      fullAddr += (fullAddr.isNotEmpty ? ', $city' : city);
+    }
+    if (state.isNotEmpty && state != 'null') {
+      fullAddr += (fullAddr.isNotEmpty ? ', $state' : state);
+    }
+    if (pincode.isNotEmpty && pincode != 'null') {
+      fullAddr += (fullAddr.isNotEmpty ? ' - $pincode' : pincode);
+    }
+
+    String phone =
+        (invoice.customerData['phoneNumber'] ?? invoice.customerData['phone'])
+            ?.toString() ??
+        '';
     String email = invoice.customerData['email']?.toString() ?? '';
 
     return pw.Row(
@@ -244,9 +277,12 @@ class PdfService {
               pw.SizedBox(height: 4),
               pw.Container(width: 200, height: 1, color: PdfColors.grey400),
               pw.SizedBox(height: 8),
-              if (phone.trim().isNotEmpty && phone != 'null') _buildInfoRow('Phone', phone),
-              if (email.trim().isNotEmpty && email != 'null') _buildInfoRow('Email', email),
-              if (fullAddr.trim().isNotEmpty && fullAddr != 'null') _buildInfoRow('Address', fullAddr),
+              if (phone.trim().isNotEmpty && phone != 'null')
+                _buildInfoRow('Phone', phone),
+              if (email.trim().isNotEmpty && email != 'null')
+                _buildInfoRow('Email', email),
+              if (fullAddr.trim().isNotEmpty && fullAddr != 'null')
+                _buildInfoRow('Address', fullAddr),
             ],
           ),
         ),
@@ -307,11 +343,6 @@ class PdfService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.SizedBox(
-            width: 15,
-            child: pw.Text(label, style: const pw.TextStyle(fontSize: 10)),
-          ),
-          pw.Text(': ', style: const pw.TextStyle(fontSize: 10)),
           pw.Expanded(
             child: pw.Text(value, style: const pw.TextStyle(fontSize: 10)),
           ),
@@ -339,7 +370,7 @@ class PdfService {
               _buildTableHeader('ITEM DESCRIPTION', align: pw.TextAlign.left),
               _buildTableHeader('UNIT PRICE', align: pw.TextAlign.center),
               _buildTableHeader('QUANTITY', align: pw.TextAlign.center),
-              _buildTableHeader('DISCOUNT PRICE', align: pw.TextAlign.center),
+              _buildTableHeader('TOTAL PRICE', align: pw.TextAlign.center),
             ],
           ),
           ...invoice.items.asMap().entries.map((entry) {
@@ -353,22 +384,30 @@ class PdfService {
                   align: pw.TextAlign.center,
                 ),
                 pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(item.product.name, style: const pw.TextStyle(fontSize: 10)),
-                      if (item.product.name.contains('(Service)') && invoice.servicenotes != null && invoice.servicenotes!.isNotEmpty)
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(top: 2),
-                          child: pw.Text(invoice.servicenotes!, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
-                        ),
-                      if (!item.product.name.contains('(Service)') && invoice.productnotes != null && invoice.productnotes!.isNotEmpty)
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(top: 2),
-                          child: pw.Text(invoice.productnotes!, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
-                        ),
-                    ],
+                  padding: const pw.EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 8,
+                  ),
+                  child: pw.RichText(
+                    textAlign: pw.TextAlign.left,
+                    text: pw.TextSpan(
+                      text: item.product.name,
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.black,
+                      ),
+                      children: [
+                        if (item.product.description != null &&
+                            item.product.description!.isNotEmpty)
+                          pw.TextSpan(
+                            text: '\n${item.product.description}',
+                            style: const pw.TextStyle(
+                              fontSize: 9,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 _buildTableCell(
@@ -385,7 +424,7 @@ class PdfService {
                 ),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -458,49 +497,58 @@ class PdfService {
               style: const pw.TextStyle(fontSize: 10),
             ),
             pw.SizedBox(height: 15),
-            pw.Text(
-              'Terms & Conditions',
-              style: pw.TextStyle(
-                color: PdfColor.fromHex('#5A9BD5'),
-                fontWeight: pw.FontWeight.bold,
-                fontSize: 10,
+            if (invoice.termsnotes != null &&
+                invoice.termsnotes!.isNotEmpty) ...[
+              pw.Text(
+                'Terms & Conditions',
+                style: pw.TextStyle(
+                  color: PdfColor.fromHex('#5A9BD5'),
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
               ),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              invoice.termsnotes?.isNotEmpty == true 
-                  ? invoice.termsnotes! 
-                  : 'warranty not applicable for any broken sapre parts',
-              style: const pw.TextStyle(fontSize: 10),
-            ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                invoice.termsnotes ?? '',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+            ],
             pw.SizedBox(height: 20),
-            pw.Row(
-              children: [
-                pw.Text(
-                  'PAYMENT METHOD : ',
-                  style: pw.TextStyle(
-                    color: PdfColor.fromHex('#5A9BD5'),
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 10,
+            if (invoice.isGstApplied) ...[
+              pw.Row(
+                children: [
+                  pw.Text(
+                    'PAYMENT METHOD : ',
+                    style: pw.TextStyle(
+                      color: PdfColor.fromHex('#5A9BD5'),
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
                   ),
-                ),
-                pw.Text((invoice.paymentmethod ?? 'Cash').toUpperCase(), style: const pw.TextStyle(fontSize: 10)),
-              ],
-            ),
-            pw.SizedBox(height: 4),
-            pw.Row(
-              children: [
-                pw.Text(
-                  'PAYMENT STATUS : ',
-                  style: pw.TextStyle(
-                    color: PdfColor.fromHex('#5A9BD5'),
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 10,
+                  pw.Text(
+                    (invoice.paymentmethod ?? 'Cash').toUpperCase(),
+                    style: const pw.TextStyle(fontSize: 10),
                   ),
-                ),
-                pw.Text((invoice.paymentstatus ?? 'Unpaid').toUpperCase(), style: const pw.TextStyle(fontSize: 10)),
-              ],
-            ),
+                ],
+              ),
+              pw.SizedBox(height: 4),
+              pw.Row(
+                children: [
+                  pw.Text(
+                    'PAYMENT STATUS : ',
+                    style: pw.TextStyle(
+                      color: PdfColor.fromHex('#5A9BD5'),
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                  pw.Text(
+                    (invoice.paymentstatus ?? 'Unpaid').toUpperCase(),
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -595,9 +643,9 @@ class PdfService {
   }
 
   static pw.Widget _buildSignature(
-      pw.ImageProvider signatureImage,
-      pw.ImageProvider smartroLogo,
-      ) {
+    pw.ImageProvider signatureImage,
+    pw.ImageProvider smartroLogo,
+  ) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.end,
       crossAxisAlignment: pw.CrossAxisAlignment.end,
@@ -609,7 +657,7 @@ class PdfService {
             children: [
               pw.Container(
                 width: 180,
-                height: 60,
+                height: 50,
                 child: pw.Stack(
                   children: [
                     pw.Positioned(
@@ -617,7 +665,7 @@ class PdfService {
                       top: 0,
                       child: pw.Image(
                         signatureImage,
-                        height: 60,
+                        height: 50,
                         fit: pw.BoxFit.contain,
                       ),
                     ),
@@ -628,7 +676,7 @@ class PdfService {
                       top: 0,
                       child: pw.Image(
                         smartroLogo,
-                        height: 60,
+                        height: 50,
                         fit: pw.BoxFit.contain,
                       ),
                     ),
@@ -638,11 +686,7 @@ class PdfService {
 
               pw.SizedBox(height: 5),
 
-              pw.Container(
-                width: 250,
-                height: 1.5,
-                color: PdfColors.black,
-              ),
+              pw.Container(width: 250, height: 1.5, color: PdfColors.black),
 
               pw.SizedBox(height: 5),
 
@@ -661,26 +705,67 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildFooter() {
+  static pw.Widget _buildFooter(
+    pw.ImageProvider lgLogo,
+    pw.ImageProvider aquaLogo,
+    pw.ImageProvider hawellsLogo,
+    pw.ImageProvider vgaurdLogo,
+  ) {
     return pw.Container(
       width: double.infinity,
       color: PdfColor.fromHex('#5A9BD5'),
       padding: const pw.EdgeInsets.symmetric(vertical: 15, horizontal: 40),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          pw.Text(
-            'Thank you for contacting us! Our services:',
-            style: pw.TextStyle(
-              color: PdfColors.white,
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 10,
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Thank you for contacting us! Our services:',
+                  style: pw.TextStyle(
+                    color: PdfColors.white,
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+                pw.SizedBox(height: 5),
+                pw.Text(
+                  'Multi services & sales available : Building construction,water level controller,Ac,water purifier,fridge, washing machine, dish washer,cctv, UPS, solar power system, stabilizer, chimney,water heater,solar heater, plumbing, electrical, house cleaning ,home shifting, fabrication, automation, Lightings, Smart switches, Painting works,generators,Ro plants, softener etc...',
+                  style: const pw.TextStyle(
+                    color: PdfColors.white,
+                    fontSize: 9,
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+                    pw.Image(lgLogo, height: 25),
+                    pw.SizedBox(width: 15),
+                    pw.Image(aquaLogo, height: 40 ,width: 60,fit: pw.BoxFit.cover),
+                    pw.SizedBox(width: 15),
+                    pw.Image(hawellsLogo, height: 25),
+                    pw.SizedBox(width: 15),
+                    pw.Image(vgaurdLogo, height: 25),
+                  ],
+                ),
+              ],
             ),
           ),
-          pw.SizedBox(height: 5),
-          pw.Text(
-            'Multi services & sales available : Building construction,water level controller,Ac,water purifier,fridge, washing machine, dish washer,cctv, UPS, solar power system, stabilizer, chimney,water heater,solar heater, plumbing, electrical, house cleaning ,home shifting, fabrication, automation, Lightings, Smart switches, Painting works,generators,Ro plants, softener etc...',
-            style: const pw.TextStyle(color: PdfColors.white, fontSize: 8),
+          pw.SizedBox(width: 20),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(3),
+            color: PdfColors.white,
+            child: pw.BarcodeWidget(
+              data: 'https://www.smartro.shop/',
+              width: 55,
+              height: 55,
+              barcode: pw.Barcode.qrCode(),
+              drawText: false,
+            ),
           ),
         ],
       ),

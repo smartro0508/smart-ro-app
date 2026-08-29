@@ -118,7 +118,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ? allProducts
                 : allProducts
                       .where(
-                        (p) => p.name.toLowerCase().contains(
+                        (p) => p.productname.toLowerCase().contains(
                           _searchQuery,
                         ),
                       )
@@ -179,7 +179,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    product.name,
+                                    product.productname,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(

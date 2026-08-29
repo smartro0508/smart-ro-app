@@ -72,4 +72,39 @@ class InvoiceCubit extends Cubit<InvoiceState> {
       }
     }
   }
+
+  void updateInvoice(String id, InvoiceModel invoice) async {
+    emit(InvoiceAdding());
+    try {
+      await _invoiceService.updateInvoice(id, invoice);
+      emit(InvoiceAdded(invoice));
+      getInvoices(refresh: true);
+    } catch (e) {
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
+      emit(InvoiceAddError(errorMessage));
+      if (_invoices.isNotEmpty) {
+        emit(InvoiceLoaded(List.from(_invoices), hasReachedMax: _hasReachedMax));
+      }
+    }
+  }
+
+  void deleteInvoice(String id) async {
+    try {
+      await _invoiceService.deleteInvoice(id);
+      _invoices.removeWhere((invoice) => invoice.id == id);
+      emit(InvoiceLoaded(List.from(_invoices), hasReachedMax: _hasReachedMax));
+    } catch (e) {
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
+      emit(InvoiceError(errorMessage));
+      if (_invoices.isNotEmpty) {
+        emit(InvoiceLoaded(List.from(_invoices), hasReachedMax: _hasReachedMax));
+      }
+    }
+  }
 }

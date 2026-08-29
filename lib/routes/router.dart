@@ -14,6 +14,7 @@ import '../screens/product_form_screen.dart';
 import '../screens/service_form_screen.dart';
 import '../models/product_model.dart';
 import '../models/service_model.dart';
+import '../models/invoice_model.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -38,7 +39,10 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: '/create-invoice',
-          builder: (context, state) => const CreateInvoiceScreen(),
+          builder: (context, state) {
+            final invoice = state.extra as InvoiceModel?;
+            return CreateInvoiceScreen(invoice: invoice);
+          },
         ),
         GoRoute(
           path: '/customers',

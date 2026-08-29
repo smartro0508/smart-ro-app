@@ -15,7 +15,8 @@ import '../models/service_model.dart';
 import '../widgets/premium_animated_app_bar.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
-  const CreateInvoiceScreen({super.key});
+  final InvoiceModel? invoice;
+  const CreateInvoiceScreen({super.key, this.invoice});
 
   @override
   State<CreateInvoiceScreen> createState() => _CreateInvoiceScreenState();
@@ -24,11 +25,7 @@ class CreateInvoiceScreen extends StatefulWidget {
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _discountController = TextEditingController(text: '0');
-  final _termsNotesController = TextEditingController(
-    text: 'warranty not applicable for any broken sapre parts',
-  );
-  final _productNotesController = TextEditingController();
-  final _serviceNotesController = TextEditingController();
+  final _termsNotesController = TextEditingController();
 
   bool _applyGST = true;
 
@@ -52,11 +49,28 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final List<String> _paymentStatuses = ['Paid', 'Unpaid', 'Partial'];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.invoice != null) {
+      final inv = widget.invoice!;
+      try {
+        _selectedCustomer = CustomerModel.fromJson(inv.customerData);
+      } catch (e) {
+        _selectedCustomer = null;
+      }
+      _invoiceItems.addAll(inv.items);
+      _applyGST = inv.isGstApplied;
+      _discountController.text = inv.totalDiscount.toString();
+      _paymentMethod = inv.paymentmethod ?? 'Cash';
+      _paymentStatus = inv.paymentstatus ?? 'Unpaid';
+      _termsNotesController.text = inv.termsnotes ?? '';
+    }
+  }
+
+  @override
   void dispose() {
     _discountController.dispose();
     _termsNotesController.dispose();
-    _productNotesController.dispose();
-    _serviceNotesController.dispose();
     super.dispose();
   }
 
@@ -93,7 +107,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _addProduct(
         ProductModel(
           id: '${service.id}_svc',
-          name: '${service.servicename} (Service)',
+          productname: '${service.servicename} (Service)',
+          description: service.description,
           price: service.servicecost,
         ),
       );
@@ -102,7 +117,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _addProduct(
         ProductModel(
           id: '${service.id}_prd',
-          name: '${service.servicename} (Product)',
+          productname: '${service.servicename} (Product)',
+          description: service.description,
           price: service.serviceproductcost,
         ),
       );
@@ -127,9 +143,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           children: [
             Image.asset('assets/app-logo.png', height: 28),
             const SizedBox(width: 8),
-            const Text(
-              'Create Invoice',
-              style: TextStyle(
+            Text(
+              widget.invoice != null ? 'Edit Invoice' : 'Create Invoice',
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -151,8 +167,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             if (_selectedCustomer == null)
               Autocomplete<CustomerModel>(
                 optionsBuilder: (TextEditingValue textEditingValue) async {
-                  if (textEditingValue.text.isEmpty)
+                  if (textEditingValue.text.isEmpty) {
                     return const Iterable<CustomerModel>.empty();
+                  }
                   setState(() => _isSearchingCustomer = true);
                   try {
                     final customerService = CustomerService();
@@ -184,45 +201,63 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 },
                 fieldViewBuilder:
                     (context, controller, focusNode, onFieldSubmitted) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryDark.withValues(
-                                alpha: 0.04,
-                              ),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: TextFormField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: _inputDecoration(
-                            'Search Customer by Name',
-                            Icons.search,
-                            suffixIcon: _isSearchingCustomer
-                                ? const Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: SizedBox(
-                                      width: 12,
-                                      height: 12,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primaryDark.withValues(
+                                      alpha: 0.04,
                                     ),
-                                  )
-                                : null,
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: TextFormField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                decoration: _inputDecoration(
+                                  'Search Customer by Name',
+                                  Icons.search,
+                                  suffixIcon: _isSearchingCustomer
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(12),
+                                          child: SizedBox(
+                                            width: 12,
+                                            height: 12,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.person_add_alt_1, color: AppColors.primary),
+                              onPressed: () => context.push('/add-customer'),
+                              tooltip: 'Create Customer',
+                            ),
+                          ),
+                        ],
                       );
                     },
               )
@@ -233,8 +268,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             _buildSectionTitle('Add Products / Services'),
             Autocomplete<ProductModel>(
               optionsBuilder: (TextEditingValue textEditingValue) async {
-                if (textEditingValue.text.isEmpty)
+                if (textEditingValue.text.isEmpty) {
                   return const Iterable<ProductModel>.empty();
+                }
                 setState(() => _isSearchingProduct = true);
                 try {
                   final productService = ProductService();
@@ -263,45 +299,63 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               },
               fieldViewBuilder:
                   (context, controller, focusNode, onFieldSubmitted) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryDark.withValues(
-                              alpha: 0.04,
-                            ),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        decoration: _inputDecoration(
-                          'Search Product to add',
-                          Icons.inventory_2_outlined,
-                          suffixIcon: _isSearchingProduct
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: SizedBox(
-                                    width: 12,
-                                    height: 12,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryDark.withValues(
+                                    alpha: 0.04,
                                   ),
-                                )
-                              : null,
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: TextFormField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              decoration: _inputDecoration(
+                                'Search Product to add',
+                                Icons.inventory_2_outlined,
+                                suffixIcon: _isSearchingProduct
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 12,
+                                          height: 12,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.add_box_outlined, color: AppColors.primary),
+                            onPressed: () => context.push('/add-product'),
+                            tooltip: 'Create Product',
+                          ),
+                        ),
+                      ],
                     );
                   },
             ),
@@ -309,8 +363,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             const SizedBox(height: 16),
             Autocomplete<ServiceModel>(
               optionsBuilder: (TextEditingValue textEditingValue) async {
-                if (textEditingValue.text.isEmpty)
+                if (textEditingValue.text.isEmpty) {
                   return const Iterable<ServiceModel>.empty();
+                }
                 setState(() => _isSearchingService = true);
                 try {
                   final serviceService = ServiceService();
@@ -341,45 +396,63 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               },
               fieldViewBuilder:
                   (context, controller, focusNode, onFieldSubmitted) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryDark.withValues(
-                              alpha: 0.04,
-                            ),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        decoration: _inputDecoration(
-                          'Search Service to add',
-                          Icons.home_repair_service_outlined,
-                          suffixIcon: _isSearchingService
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: SizedBox(
-                                    width: 12,
-                                    height: 12,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryDark.withValues(
+                                    alpha: 0.04,
                                   ),
-                                )
-                              : null,
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: TextFormField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              decoration: _inputDecoration(
+                                'Search Service to add',
+                                Icons.home_repair_service_outlined,
+                                suffixIcon: _isSearchingService
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 12,
+                                          height: 12,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                            onPressed: () => context.push('/add-service'),
+                            tooltip: 'Create Service',
+                          ),
+                        ),
+                      ],
                     );
                   },
             ),
@@ -456,6 +529,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             const SizedBox(height: 32),
             _buildSectionTitle('Additional Details'),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Container(
@@ -472,6 +546,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     ),
                     child: DropdownButtonFormField<String>(
                       value: _paymentMethod,
+                      isExpanded: true,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       decoration: _inputDecoration(
                         'Payment Method',
                         Icons.payment,
@@ -481,19 +557,36 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                           value: value,
                           child: Text(
                             value,
-                            style: TextStyle(overflow: TextOverflow.ellipsis),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       }).toList(),
-                      onChanged: (newValue) {
+                      selectedItemBuilder: (BuildContext context) {
+                        return _paymentMethods.map((String value) {
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              value,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList();
+                      },
+                      onChanged: (String? newValue) {
+                        if (newValue == null) return;
+
                         setState(() {
-                          _paymentMethod = newValue!;
+                          _paymentMethod = newValue;
                         });
                       },
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 16),
+
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
@@ -509,6 +602,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     ),
                     child: DropdownButtonFormField<String>(
                       value: _paymentStatus,
+                      isExpanded: true,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       decoration: _inputDecoration(
                         'Payment Status',
                         Icons.info_outline,
@@ -516,72 +611,35 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                       items: _paymentStatuses.map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
-                          child: Text(value),
+                          child: Text(
+                            value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
-                      onChanged: (newValue) {
+                      selectedItemBuilder: (BuildContext context) {
+                        return _paymentStatuses.map((String value) {
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              value,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList();
+                      },
+                      onChanged: (String? newValue) {
+                        if (newValue == null) return;
                         setState(() {
-                          _paymentStatus = newValue!;
+                          _paymentStatus = newValue;
                         });
                       },
                     ),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryDark.withValues(alpha: 0.04),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: TextFormField(
-                controller: _productNotesController,
-                maxLines: 2,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: _inputDecoration(
-                  'Product Notes',
-                  Icons.note_add_outlined,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryDark.withValues(alpha: 0.04),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: TextFormField(
-                controller: _serviceNotesController,
-                maxLines: 2,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: _inputDecoration(
-                  'Service Notes',
-                  Icons.home_repair_service,
-                ),
-              ),
             ),
             const SizedBox(height: 16),
             Container(
@@ -698,7 +756,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               },
               builder: (context, state) {
                 return GradientButton(
-                  text: 'Save Invoice',
+                  text: widget.invoice != null ? 'Update Invoice' : 'Save Invoice',
                   icon: Icons.save,
                   isLoading: state is InvoiceAdding,
                   onPressed: state is InvoiceAdding
@@ -726,7 +784,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                           }
 
                           final invoice = InvoiceModel(
-                            invoiceDate: DateTime.now().toIso8601String().split(
+                            id: widget.invoice?.id,
+                            invoiceNumber: widget.invoice?.invoiceNumber,
+                            invoiceDate: widget.invoice?.invoiceDate ?? DateTime.now().toIso8601String().split(
                               'T',
                             )[0],
                             type: _applyGST ? 'Tax Invoice' : 'Bill of Supply',
@@ -744,11 +804,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             paymentmethod: _paymentMethod,
                             paymentstatus: _paymentStatus,
                             termsnotes: _termsNotesController.text,
-                            productnotes: _productNotesController.text,
-                            servicenotes: _serviceNotesController.text,
                           );
 
-                          context.read<InvoiceCubit>().addInvoice(invoice);
+                          if (widget.invoice != null && widget.invoice!.id != null) {
+                            context.read<InvoiceCubit>().updateInvoice(widget.invoice!.id!, invoice);
+                          } else {
+                            context.read<InvoiceCubit>().addInvoice(invoice);
+                          }
                         },
                 );
               },

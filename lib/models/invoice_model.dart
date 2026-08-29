@@ -19,7 +19,8 @@ class InvoiceItemModel {
       return InvoiceItemModel(
         product: ProductModel(
           id: json['id'] ?? '',
-          name: json['name'] ?? 'Unknown',
+          productname: json['productname'] ?? 'Unknown',
+          description: json['description'],
           price: json['price'] != null ? double.parse(json['price'].toString()) : 0.0,
         ),
         quantity: json['qty'] ?? json['quantity'] ?? 1,
@@ -30,7 +31,8 @@ class InvoiceItemModel {
   Map<String, dynamic> toJson() {
     return {
       'id': product.id,
-      'name': product.name,
+      'productname': product.productname,
+      if (product.description != null) 'description': product.description,
       'price': product.price,
       'qty': quantity,
     };
@@ -56,8 +58,6 @@ class InvoiceModel {
   final String? paymentmethod;
   final String? paymentstatus;
   final String? termsnotes;
-  final String? productnotes;
-  final String? servicenotes;
 
   InvoiceModel({
     this.id,
@@ -78,8 +78,6 @@ class InvoiceModel {
     this.paymentmethod,
     this.paymentstatus,
     this.termsnotes,
-    this.productnotes,
-    this.servicenotes,
   });
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
@@ -127,8 +125,6 @@ class InvoiceModel {
       paymentmethod: json['paymentmethod'],
       paymentstatus: json['paymentstatus'],
       termsnotes: json['termsnotes'],
-      productnotes: json['productnotes'],
-      servicenotes: json['servicenotes'],
     );
   }
 
@@ -152,8 +148,6 @@ class InvoiceModel {
       if (paymentmethod != null) 'paymentmethod': paymentmethod,
       if (paymentstatus != null) 'paymentstatus': paymentstatus,
       if (termsnotes != null) 'termsnotes': termsnotes,
-      if (productnotes != null) 'productnotes': productnotes,
-      if (servicenotes != null) 'servicenotes': servicenotes,
     };
   }
 }
