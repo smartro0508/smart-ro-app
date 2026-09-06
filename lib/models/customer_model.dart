@@ -8,6 +8,7 @@ class CustomerModel {
   final String? state;
   final String? pincode;
   final String? country;
+  final String? gstnumber;
 
   CustomerModel({
     this.id,
@@ -19,6 +20,7 @@ class CustomerModel {
     this.state,
     this.pincode,
     this.country,
+    this.gstnumber,
   });
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class CustomerModel {
       state: json['state'],
       pincode: json['pincode'],
       country: json['country'],
+      gstnumber: json['gstnumber'],
     );
   }
 
@@ -46,6 +49,7 @@ class CustomerModel {
       if (state != null) 'state': state,
       if (pincode != null) 'pincode': pincode,
       if (country != null) 'country': country,
+      if (gstnumber != null) 'gstnumber': gstnumber,
     };
   }
 }

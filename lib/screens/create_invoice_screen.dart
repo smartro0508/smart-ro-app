@@ -16,6 +16,7 @@ import '../widgets/premium_animated_app_bar.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   final InvoiceModel? invoice;
+
   const CreateInvoiceScreen({super.key, this.invoice});
 
   @override
@@ -26,8 +27,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _discountController = TextEditingController(text: '0');
   final _termsNotesController = TextEditingController();
+  final _remindersDaysController = TextEditingController();
 
-  bool _applyGST = true;
+  TextEditingController? _productSearchController;
+  TextEditingController? _serviceSearchController;
+
+  bool _applyGST = false;
 
   bool _isSearchingCustomer = false;
   bool _isSearchingProduct = false;
@@ -37,7 +42,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final List<InvoiceItemModel> _invoiceItems = [];
 
   String _paymentMethod = 'Cash';
-  String _paymentStatus = 'Unpaid';
+  String _paymentStatus = 'Paid';
 
   final List<String> _paymentMethods = [
     'Cash',
@@ -64,6 +69,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _paymentMethod = inv.paymentmethod ?? 'Cash';
       _paymentStatus = inv.paymentstatus ?? 'Unpaid';
       _termsNotesController.text = inv.termsnotes ?? '';
+      _remindersDaysController.text = inv.reminderdays?.toString() ?? '';
     }
   }
 
@@ -71,6 +77,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   void dispose() {
     _discountController.dispose();
     _termsNotesController.dispose();
+    _remindersDaysController.dispose();
     super.dispose();
   }
 
@@ -248,11 +255,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                           const SizedBox(width: 8),
                           Container(
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.person_add_alt_1, color: AppColors.primary),
+                              icon: const Icon(
+                                Icons.person_add_alt_1,
+                                color: AppColors.primary,
+                              ),
                               onPressed: () => context.push('/add-customer'),
                               tooltip: 'Create Customer',
                             ),
@@ -287,6 +297,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               displayStringForOption: (ProductModel option) => option.name,
               onSelected: (ProductModel selection) {
                 _addProduct(selection);
+                Future.delayed(const Duration(milliseconds: 50), () {
+                  _productSearchController?.clear();
+                });
               },
               optionsViewBuilder: (context, onSelected, options) {
                 return _buildOptionsView<ProductModel>(
@@ -299,6 +312,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               },
               fieldViewBuilder:
                   (context, controller, focusNode, onFieldSubmitted) {
+                    _productSearchController = controller;
                     return Row(
                       children: [
                         Expanded(
@@ -346,11 +360,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         const SizedBox(width: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.add_box_outlined, color: AppColors.primary),
+                            icon: const Icon(
+                              Icons.add_box_outlined,
+                              color: AppColors.primary,
+                            ),
                             onPressed: () => context.push('/add-product'),
                             tooltip: 'Create Product',
                           ),
@@ -383,6 +400,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   option.servicename,
               onSelected: (ServiceModel selection) {
                 _addService(selection);
+                Future.delayed(const Duration(milliseconds: 50), () {
+                  _serviceSearchController?.clear();
+                });
               },
               optionsViewBuilder: (context, onSelected, options) {
                 return _buildOptionsView<ServiceModel>(
@@ -396,6 +416,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               },
               fieldViewBuilder:
                   (context, controller, focusNode, onFieldSubmitted) {
+                    _serviceSearchController = controller;
                     return Row(
                       children: [
                         Expanded(
@@ -443,11 +464,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         const SizedBox(width: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                            icon: const Icon(
+                              Icons.add_circle_outline,
+                              color: AppColors.primary,
+                            ),
                             onPressed: () => context.push('/add-service'),
                             tooltip: 'Create Service',
                           ),
@@ -528,120 +552,126 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
             const SizedBox(height: 32),
             _buildSectionTitle('Additional Details'),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryDark.withValues(alpha: 0.04),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: DropdownButtonFormField<String>(
-                      value: _paymentMethod,
-                      isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      decoration: _inputDecoration(
-                        'Payment Method',
-                        Icons.payment,
-                      ),
-                      items: _paymentMethods.map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(
-                            value,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+            if (_applyGST) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryDark.withValues(
+                              alpha: 0.04,
+                            ),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
                           ),
-                        );
-                      }).toList(),
-                      selectedItemBuilder: (BuildContext context) {
-                        return _paymentMethods.map((String value) {
-                          return Align(
-                            alignment: Alignment.centerLeft,
+                        ],
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _paymentMethod,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                        decoration: _inputDecoration(
+                          'Payment Method',
+                          Icons.payment,
+                        ),
+                        items: _paymentMethods.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
                             child: Text(
                               value,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           );
-                        }).toList();
-                      },
-                      onChanged: (String? newValue) {
-                        if (newValue == null) return;
+                        }).toList(),
+                        selectedItemBuilder: (BuildContext context) {
+                          return _paymentMethods.map((String value) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList();
+                        },
+                        onChanged: (String? newValue) {
+                          if (newValue == null) return;
 
-                        setState(() {
-                          _paymentMethod = newValue;
-                        });
-                      },
+                          setState(() {
+                            _paymentMethod = newValue;
+                          });
+                        },
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(width: 16),
+                  const SizedBox(width: 16),
 
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryDark.withValues(alpha: 0.04),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: DropdownButtonFormField<String>(
-                      value: _paymentStatus,
-                      isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      decoration: _inputDecoration(
-                        'Payment Status',
-                        Icons.info_outline,
-                      ),
-                      items: _paymentStatuses.map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(
-                            value,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryDark.withValues(
+                              alpha: 0.04,
+                            ),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
                           ),
-                        );
-                      }).toList(),
-                      selectedItemBuilder: (BuildContext context) {
-                        return _paymentStatuses.map((String value) {
-                          return Align(
-                            alignment: Alignment.centerLeft,
+                        ],
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _paymentStatus,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                        decoration: _inputDecoration(
+                          'Payment Status',
+                          Icons.info_outline,
+                        ),
+                        items: _paymentStatuses.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
                             child: Text(
                               value,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           );
-                        }).toList();
-                      },
-                      onChanged: (String? newValue) {
-                        if (newValue == null) return;
-                        setState(() {
-                          _paymentStatus = newValue;
-                        });
-                      },
+                        }).toList(),
+                        selectedItemBuilder: (BuildContext context) {
+                          return _paymentStatuses.map((String value) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList();
+                        },
+                        onChanged: (String? newValue) {
+                          if (newValue == null) return;
+                          setState(() {
+                            _paymentStatus = newValue;
+                          });
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                ],
+              ),
+            ],
+            const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
                 color: AppColors.surface,
@@ -663,6 +693,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   fontWeight: FontWeight.w500,
                 ),
                 decoration: _inputDecoration('Terms & Conditions', Icons.gavel),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryDark.withValues(alpha: 0.04),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: TextFormField(
+                controller: _remindersDaysController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: _inputDecoration('Reminders Days *', Icons.calendar_today),
               ),
             ),
 
@@ -756,7 +811,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               },
               builder: (context, state) {
                 return GradientButton(
-                  text: widget.invoice != null ? 'Update Invoice' : 'Save Invoice',
+                  text: widget.invoice != null
+                      ? 'Update Invoice'
+                      : 'Save Invoice',
                   icon: Icons.save,
                   isLoading: state is InvoiceAdding,
                   onPressed: state is InvoiceAdding
@@ -783,12 +840,24 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             return;
                           }
 
+                          if (_remindersDaysController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please enter Reminders Days!',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                            return;
+                          }
+
                           final invoice = InvoiceModel(
                             id: widget.invoice?.id,
                             invoiceNumber: widget.invoice?.invoiceNumber,
-                            invoiceDate: widget.invoice?.invoiceDate ?? DateTime.now().toIso8601String().split(
-                              'T',
-                            )[0],
+                            invoiceDate:
+                                widget.invoice?.invoiceDate ??
+                                DateTime.now().toIso8601String().split('T')[0],
                             type: _applyGST ? 'Tax Invoice' : 'Bill of Supply',
                             customerData: _selectedCustomer!.toJson(),
                             items: _invoiceItems,
@@ -804,10 +873,15 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                             paymentmethod: _paymentMethod,
                             paymentstatus: _paymentStatus,
                             termsnotes: _termsNotesController.text,
+                            reminderdays: int.tryParse(_remindersDaysController.text.trim()),
                           );
 
-                          if (widget.invoice != null && widget.invoice!.id != null) {
-                            context.read<InvoiceCubit>().updateInvoice(widget.invoice!.id!, invoice);
+                          if (widget.invoice != null &&
+                              widget.invoice!.id != null) {
+                            context.read<InvoiceCubit>().updateInvoice(
+                              widget.invoice!.id!,
+                              invoice,
+                            );
                           } else {
                             context.read<InvoiceCubit>().addInvoice(invoice);
                           }
@@ -933,7 +1007,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             children: [
               Expanded(
                 child: Text(
-                  item.product.name,
+                  '${item.product.name}${item.product.hsncode != null && item.product.hsncode!.isNotEmpty ? ' (HSN: ${item.product.hsncode})' : ''}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -958,9 +1032,41 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '₹ ${item.product.price.toStringAsFixed(2)}',
-                style: const TextStyle(color: AppColors.textSecondary),
+              SizedBox(
+                width: 100,
+                child: TextFormField(
+                  key: ValueKey('price_${item.product.id}_$index'),
+                  initialValue: (item.product.price == item.product.price.toInt()) 
+                      ? item.product.price.toInt().toString()
+                      : item.product.price.toStringAsFixed(2),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    prefixText: '₹ ',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  onChanged: (val) {
+                    final newPrice = double.tryParse(val) ?? 0.0;
+                    setState(() {
+                      _invoiceItems[index].product = ProductModel(
+                        id: item.product.id,
+                        productname: item.product.productname,
+                        description: item.product.description,
+                        price: newPrice,
+                        hsncode: item.product.hsncode,
+                      );
+                    });
+                  },
+                ),
               ),
               Row(
                 children: [

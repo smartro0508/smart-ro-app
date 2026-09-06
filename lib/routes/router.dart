@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:smartroapp/models/customer_model.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/invoice_list_screen.dart';
@@ -65,7 +66,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/add-customer',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const CustomerOnboardingScreen(),
+      builder: (context, state) {
+        final customer = state.extra as CustomerModel?;
+        return CustomerOnboardingScreen(customer: customer);
+      },
     ),
     GoRoute(
       path: '/add-product',

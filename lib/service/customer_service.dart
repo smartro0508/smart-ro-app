@@ -75,4 +75,48 @@ class CustomerService {
       throw Exception('Network error occurred');
     }
   }
+
+  Future<CustomerModel> getCustomer(String id) async {
+    try {
+      final response = await _dio.post('/customers/get/$id');
+      if (response.statusCode == 200) {
+        return CustomerModel.fromJson(response.data['data']);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to load customer');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response?.data['message'] ?? 'Failed to load customer');
+      }
+      throw Exception('Network error occurred');
+    }
+  }
+
+  Future<void> updateCustomer(String id, CustomerModel customer) async {
+    try {
+      final response = await _dio.post('/customers/update/$id', data: customer.toJson());
+      if (response.statusCode != 200) {
+        throw Exception(response.data['message'] ?? 'Failed to update customer');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response?.data['message'] ?? 'Failed to update customer');
+      }
+      throw Exception('Network error occurred');
+    }
+  }
+
+  Future<void> deleteCustomer(String id) async {
+    try {
+      final response = await _dio.post('/customers/delete/$id');
+      if (response.statusCode != 200) {
+        throw Exception(response.data['message'] ?? 'Failed to delete customer');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response?.data['message'] ?? 'Failed to delete customer');
+      }
+      throw Exception('Network error occurred');
+    }
+  }
 }

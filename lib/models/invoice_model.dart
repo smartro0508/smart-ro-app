@@ -2,7 +2,7 @@ import 'product_model.dart';
 import 'dart:convert';
 
 class InvoiceItemModel {
-  final ProductModel product;
+  ProductModel product;
   int quantity;
 
   InvoiceItemModel({required this.product, required this.quantity});
@@ -22,6 +22,7 @@ class InvoiceItemModel {
           productname: json['productname'] ?? 'Unknown',
           description: json['description'],
           price: json['price'] != null ? double.parse(json['price'].toString()) : 0.0,
+          hsncode: json['hsncode'],
         ),
         quantity: json['qty'] ?? json['quantity'] ?? 1,
       );
@@ -34,6 +35,7 @@ class InvoiceItemModel {
       'productname': product.productname,
       if (product.description != null) 'description': product.description,
       'price': product.price,
+      if (product.hsncode != null) 'hsncode': product.hsncode,
       'qty': quantity,
     };
   }
@@ -58,6 +60,7 @@ class InvoiceModel {
   final String? paymentmethod;
   final String? paymentstatus;
   final String? termsnotes;
+  final int? reminderdays;
 
   InvoiceModel({
     this.id,
@@ -78,6 +81,7 @@ class InvoiceModel {
     this.paymentmethod,
     this.paymentstatus,
     this.termsnotes,
+    this.reminderdays,
   });
 
   factory InvoiceModel.fromJson(Map<String, dynamic> json) {
@@ -125,6 +129,7 @@ class InvoiceModel {
       paymentmethod: json['paymentmethod'],
       paymentstatus: json['paymentstatus'],
       termsnotes: json['termsnotes'],
+      reminderdays: json['reminderdays'] != null ? int.tryParse(json['reminderdays'].toString()) : null,
     );
   }
 
@@ -148,6 +153,7 @@ class InvoiceModel {
       if (paymentmethod != null) 'paymentmethod': paymentmethod,
       if (paymentstatus != null) 'paymentstatus': paymentstatus,
       if (termsnotes != null) 'termsnotes': termsnotes,
+      if (reminderdays != null) 'reminderdays': reminderdays,
     };
   }
 }

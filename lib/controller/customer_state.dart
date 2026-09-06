@@ -25,3 +25,21 @@ class CustomerAddError extends CustomerState {
   final String message;
   CustomerAddError(this.message);
 }
+
+class CustomerUpdating extends CustomerState {}
+
+class CustomerUpdated extends CustomerState {}
+
+class CustomerUpdateError extends CustomerState {
+  final String message;
+  CustomerUpdateError(this.message);
+}
+
+class CustomerDeleting extends CustomerState {}
+
+class CustomerDeleted extends CustomerState {}
+
+class CustomerDeleteError extends CustomerState {
+  final String message;
+  CustomerDeleteError(this.message);
+}

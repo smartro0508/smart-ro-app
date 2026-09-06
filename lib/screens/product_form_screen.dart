@@ -22,6 +22,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
   final _priceController = TextEditingController();
+  final _hsnController = TextEditingController();
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       _nameController.text = p.productname;
       _descController.text = p.description ?? '';
       _priceController.text = p.price.toString();
+      _hsnController.text = p.hsncode ?? '';
     }
   }
 
@@ -39,6 +41,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _nameController.dispose();
     _descController.dispose();
     _priceController.dispose();
+    _hsnController.dispose();
     super.dispose();
   }
 
@@ -83,6 +86,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 return null;
               },
             ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              label: 'HSN Code', 
+              icon: Icons.numbers_outlined,
+              controller: _hsnController,
+            ),
 
             const SizedBox(height: 40),
             BlocConsumer<ProductCubit, ProductState>(
@@ -118,6 +127,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         productname: _nameController.text.trim(),
                         description: _descController.text.trim(),
                         price: double.parse(_priceController.text.trim()),
+                        hsncode: _hsnController.text.trim().isEmpty ? null : _hsnController.text.trim(),
                       );
                       
                       if (isEditing) {

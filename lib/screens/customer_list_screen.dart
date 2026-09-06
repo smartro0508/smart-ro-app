@@ -227,8 +227,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                 children: [
                                   // Avatar
                                   Container(
-                                    width: 50,
-                                    height: 50,
+                                    width: 40,
+                                    height: 40,
                                     decoration: BoxDecoration(
                                       color: AppColors.primary.withValues(
                                         alpha: 0.10,
@@ -240,7 +240,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                         initial,
                                         style: const TextStyle(
                                           color: AppColors.primary,
-                                          fontSize: 19,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
@@ -298,27 +298,61 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                     ),
                                   ),
 
-                                  // Customer badge
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 9,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.07,
+                                  // Customer badge and actions
+                                  Row(
+                                    children: [
+                                      _buildCustomerIconButton(
+                                        Icons.edit_outlined,
+                                        Colors.orange,
+                                        () {
+                                          context.push(
+                                            '/add-customer',
+                                            extra: customer,
+                                          );
+                                        },
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'CUSTOMER',
-                                      style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontSize: 8.5,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.5,
+                                      const SizedBox(width: 8),
+                                      _buildCustomerIconButton(
+                                        Icons.delete_outline,
+                                        AppColors.error,
+                                        () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text(
+                                                'Delete Customer',
+                                              ),
+                                              content: const Text(
+                                                'Are you sure you want to delete this customer?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    context
+                                                        .read<CustomerCubit>()
+                                                        .deleteCustomer(
+                                                          customer.id!,
+                                                        );
+                                                    Navigator.pop(ctx);
+                                                  },
+                                                  child: const Text(
+                                                    'Delete',
+                                                    style: TextStyle(
+                                                      color: AppColors.error,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -446,6 +480,25 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
         label: const Text(
           'Add Customer',
           style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerIconButton(
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return Material(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Icon(icon, size: 18, color: color),
         ),
       ),
     );

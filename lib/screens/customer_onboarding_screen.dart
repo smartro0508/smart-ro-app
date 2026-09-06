@@ -9,10 +9,13 @@ import '../controller/customer_state.dart';
 import '../models/customer_model.dart';
 
 class CustomerOnboardingScreen extends StatefulWidget {
-  const CustomerOnboardingScreen({super.key});
+  final CustomerModel? customer;
+
+  const CustomerOnboardingScreen({super.key, this.customer});
 
   @override
-  State<CustomerOnboardingScreen> createState() => _CustomerOnboardingScreenState();
+  State<CustomerOnboardingScreen> createState() =>
+      _CustomerOnboardingScreenState();
 }
 
 class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
@@ -25,6 +28,24 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _countryController = TextEditingController();
+  final _gstController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.customer != null) {
+      final c = widget.customer!;
+      _nameController.text = c.fullName;
+      _phoneController.text = c.phoneNumber ?? '';
+      _emailController.text = c.email ?? '';
+      _addressController.text = c.address ?? '';
+      _cityController.text = c.city ?? '';
+      _stateController.text = c.state ?? '';
+      _pincodeController.text = c.pincode ?? '';
+      _countryController.text = c.country ?? '';
+      _gstController.text = c.gstnumber ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -36,14 +57,19 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     _stateController.dispose();
     _pincodeController.dispose();
     _countryController.dispose();
+    _gstController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.customer != null;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add New Customer', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isEditing ? 'Edit Customer' : 'Add New Customer',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: Form(
@@ -53,15 +79,15 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
           children: [
             _buildSectionTitle('Personal Details'),
             CustomTextField(
-              label: 'Customer Name *', 
+              label: 'Customer Name *',
               icon: Icons.person,
               controller: _nameController,
               validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
             ),
             const SizedBox(height: 16),
             CustomTextField(
-              label: 'Mobile Number *', 
-              icon: Icons.phone, 
+              label: 'Mobile Number *',
+              icon: Icons.phone,
               keyboardType: TextInputType.phone,
               controller: _phoneController,
               validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
@@ -69,50 +95,93 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
 
             const SizedBox(height: 16),
             CustomTextField(
-              label: 'Email Address', 
-              icon: Icons.email, 
+              label: 'Email Address',
+              icon: Icons.email,
               keyboardType: TextInputType.emailAddress,
               controller: _emailController,
             ),
-            
+            const SizedBox(height: 16),
+            CustomTextField(
+              label: 'GST Number (Optional)',
+              icon: Icons.confirmation_number_outlined,
+              controller: _gstController,
+              textCapitalization: TextCapitalization.characters,
+            ),
+
             const SizedBox(height: 32),
             _buildSectionTitle('Address Details'),
-            CustomTextField(label: 'Street Address', icon: Icons.home_outlined, controller: _addressController),
+            CustomTextField(
+              label: 'Street Address',
+              icon: Icons.home_outlined,
+              controller: _addressController,
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: CustomTextField(label: 'City', icon: Icons.location_city, controller: _cityController)),
+                Expanded(
+                  child: CustomTextField(
+                    label: 'City',
+                    icon: Icons.location_city,
+                    controller: _cityController,
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: CustomTextField(label: 'State', icon: Icons.map_outlined, controller: _stateController)),
+                Expanded(
+                  child: CustomTextField(
+                    label: 'State',
+                    icon: Icons.map_outlined,
+                    controller: _stateController,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: CustomTextField(label: 'Pincode', icon: Icons.pin_drop_outlined, keyboardType: TextInputType.number, controller: _pincodeController)),
+                Expanded(
+                  child: CustomTextField(
+                    label: 'Pincode',
+                    icon: Icons.pin_drop_outlined,
+                    keyboardType: TextInputType.number,
+                    controller: _pincodeController,
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: CustomTextField(label: 'Country', icon: Icons.public, controller: _countryController)),
+                Expanded(
+                  child: CustomTextField(
+                    label: 'Country',
+                    icon: Icons.public,
+                    controller: _countryController,
+                  ),
+                ),
               ],
             ),
-
-
 
             const SizedBox(height: 40),
             BlocConsumer<CustomerCubit, CustomerState>(
               listener: (context, state) {
-                if (state is CustomerAdded) {
+                if (state is CustomerAdded || state is CustomerUpdated) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Customer Saved Successfully!'), 
+                    SnackBar(
+                      content: Text(
+                        state is CustomerUpdated
+                            ? 'Customer Updated Successfully!'
+                            : 'Customer Saved Successfully!',
+                      ),
                       backgroundColor: AppColors.success,
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
                   context.pop();
-                } else if (state is CustomerAddError) {
+                } else if (state is CustomerAddError ||
+                    state is CustomerUpdateError) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(state.message), 
+                      content: Text(
+                        state is CustomerAddError
+                            ? state.message
+                            : (state as CustomerUpdateError).message,
+                      ),
                       backgroundColor: AppColors.error,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -121,24 +190,41 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
               },
               builder: (context, state) {
                 return GradientButton(
-                  text: 'Save Customer',
+                  text: isEditing ? 'Update Customer' : 'Save Customer',
                   icon: Icons.check_circle_outline,
-                  isLoading: state is CustomerAdding,
-                  onPressed: state is CustomerAdding ? () {} : () {
-                    if (_formKey.currentState!.validate()) {
-                      final customer = CustomerModel(
-                        fullName: _nameController.text.trim(),
-                        phoneNumber: _phoneController.text.trim(),
-                        email: _emailController.text.trim(),
-                        address: _addressController.text.trim(),
-                        city: _cityController.text.trim(),
-                        state: _stateController.text.trim(),
-                        pincode: _pincodeController.text.trim(),
-                        country: _countryController.text.trim(),
-                      );
-                      context.read<CustomerCubit>().addCustomer(customer);
-                    }
-                  },
+                  isLoading:
+                      state is CustomerAdding || state is CustomerUpdating,
+                  onPressed:
+                      (state is CustomerAdding || state is CustomerUpdating)
+                      ? () {}
+                      : () {
+                          if (_formKey.currentState!.validate()) {
+                            final customer = CustomerModel(
+                              id: isEditing ? widget.customer!.id : null,
+                              fullName: _nameController.text.trim(),
+                              phoneNumber: _phoneController.text.trim(),
+                              email: _emailController.text.trim(),
+                              address: _addressController.text.trim(),
+                              city: _cityController.text.trim(),
+                              state: _stateController.text.trim(),
+                              pincode: _pincodeController.text.trim(),
+                              country: _countryController.text.trim(),
+                              gstnumber: _gstController.text.trim().isEmpty
+                                  ? null
+                                  : _gstController.text.trim(),
+                            );
+                            if (isEditing) {
+                              context.read<CustomerCubit>().updateCustomer(
+                                customer.id!,
+                                customer,
+                              );
+                            } else {
+                              context.read<CustomerCubit>().addCustomer(
+                                customer,
+                              );
+                            }
+                          }
+                        },
                 );
               },
             ),

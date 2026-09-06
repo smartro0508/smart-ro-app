@@ -72,4 +72,40 @@ class CustomerCubit extends Cubit<CustomerState> {
       }
     }
   }
+
+  void updateCustomer(String id, CustomerModel customer) async {
+    emit(CustomerUpdating());
+    try {
+      await _customerService.updateCustomer(id, customer);
+      emit(CustomerUpdated());
+      getCustomers(refresh: true);
+    } catch (e) {
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
+      emit(CustomerUpdateError(errorMessage));
+      if (_customers.isNotEmpty) {
+        emit(CustomerLoaded(List.from(_customers), hasReachedMax: _hasReachedMax));
+      }
+    }
+  }
+
+  void deleteCustomer(String id) async {
+    emit(CustomerDeleting());
+    try {
+      await _customerService.deleteCustomer(id);
+      emit(CustomerDeleted());
+      getCustomers(refresh: true);
+    } catch (e) {
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.substring(11);
+      }
+      emit(CustomerDeleteError(errorMessage));
+      if (_customers.isNotEmpty) {
+        emit(CustomerLoaded(List.from(_customers), hasReachedMax: _hasReachedMax));
+      }
+    }
+  }
 }

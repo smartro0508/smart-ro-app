@@ -3,6 +3,7 @@ class ProductModel {
   final String productname;
   final String? description;
   final double price;
+  final String? hsncode;
 
   String get name => productname;
 
@@ -11,6 +12,7 @@ class ProductModel {
     required this.productname,
     this.description,
     required this.price,
+    this.hsncode,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -19,6 +21,7 @@ class ProductModel {
       productname: json['productname'] ?? json['name'] ?? '',
       description: json['description'],
       price: json['price'] != null ? double.parse(json['price'].toString()) : 0.0,
+      hsncode: json['hsncode'],
     );
   }
 
@@ -28,6 +31,7 @@ class ProductModel {
       'productname': productname,
       if (description != null) 'description': description,
       'price': price,
+      if (hsncode != null) 'hsncode': hsncode,
     };
   }
 }

@@ -250,6 +250,7 @@ class PdfService {
             ?.toString() ??
         '';
     String email = invoice.customerData['email']?.toString() ?? '';
+    String gst = invoice.customerData['gstnumber']?.toString() ?? '';
 
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -283,6 +284,8 @@ class PdfService {
                 _buildInfoRow('Email', email),
               if (fullAddr.trim().isNotEmpty && fullAddr != 'null')
                 _buildInfoRow('Address', fullAddr),
+              if (gst.trim().isNotEmpty && gst != 'null')
+                _buildIGstInfoRow('GST Number : ', gst),
             ],
           ),
         ),
@@ -327,10 +330,6 @@ class PdfService {
               ],
             ),
             pw.SizedBox(height: 20),
-            pw.Text(
-              'DUE- Rs.${invoice.grandTotal.toStringAsFixed(2)}',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-            ),
           ],
         ),
       ],
@@ -351,6 +350,24 @@ class PdfService {
     );
   }
 
+  static pw.Widget _buildIGstInfoRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            label,
+            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.Expanded(
+            child: pw.Text(value, style: const pw.TextStyle(fontSize: 10)),
+          ),
+        ],
+      ),
+    );
+  }
+
   static pw.Widget _buildTable(InvoiceModel invoice) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 40),
@@ -358,9 +375,10 @@ class PdfService {
         columnWidths: {
           0: const pw.FlexColumnWidth(1),
           1: const pw.FlexColumnWidth(3),
-          2: const pw.FlexColumnWidth(2),
+          2: const pw.FlexColumnWidth(1.5),
           3: const pw.FlexColumnWidth(2),
-          4: const pw.FlexColumnWidth(2),
+          4: const pw.FlexColumnWidth(1.5),
+          5: const pw.FlexColumnWidth(2),
         },
         children: [
           pw.TableRow(
@@ -368,6 +386,7 @@ class PdfService {
             children: [
               _buildTableHeader('P-ID', align: pw.TextAlign.center),
               _buildTableHeader('ITEM DESCRIPTION', align: pw.TextAlign.left),
+              _buildTableHeader('HSN CODE', align: pw.TextAlign.left),
               _buildTableHeader('UNIT PRICE', align: pw.TextAlign.center),
               _buildTableHeader('QUANTITY', align: pw.TextAlign.center),
               _buildTableHeader('TOTAL PRICE', align: pw.TextAlign.center),
@@ -409,6 +428,10 @@ class PdfService {
                       ],
                     ),
                   ),
+                ),
+                _buildTableCell(
+                  item.product.hsncode ?? '-',
+                  align: pw.TextAlign.center,
                 ),
                 _buildTableCell(
                   'Rs.${item.product.price.toStringAsFixed(2)}',
@@ -565,8 +588,10 @@ class PdfService {
             'SUB TOTAL -',
             'Rs.${invoice.subtotal.toStringAsFixed(2)}',
           ),
-          if (invoice.isGstApplied)
-            _buildTotalRow('GST -', 'Rs.${totalGst.toStringAsFixed(2)}'),
+          if (invoice.isGstApplied) ...[
+            _buildTotalRow('CGST (9%) -', 'Rs.${invoice.cgst.toStringAsFixed(2)}'),
+            _buildTotalRow('SGST (9%) -', 'Rs.${invoice.sgst.toStringAsFixed(2)}'),
+          ],
           _buildTotalRow(
             'DISCOUNT -',
             'Rs.${invoice.totalDiscount.toStringAsFixed(2)}',
@@ -745,7 +770,12 @@ class PdfService {
                   children: [
                     pw.Image(lgLogo, height: 25),
                     pw.SizedBox(width: 15),
-                    pw.Image(aquaLogo, height: 40 ,width: 60,fit: pw.BoxFit.cover),
+                    pw.Image(
+                      aquaLogo,
+                      height: 40,
+                      width: 60,
+                      fit: pw.BoxFit.cover,
+                    ),
                     pw.SizedBox(width: 15),
                     pw.Image(hawellsLogo, height: 25),
                     pw.SizedBox(width: 15),
