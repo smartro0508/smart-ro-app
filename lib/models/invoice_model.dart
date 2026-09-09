@@ -57,8 +57,7 @@ class InvoiceModel {
   final double igst;
   final double roundOff;
   final double grandTotal;
-  final String? paymentmethod;
-  final String? paymentstatus;
+  final String? shippedto;
   final String? termsnotes;
   final int? reminderdays;
 
@@ -78,8 +77,7 @@ class InvoiceModel {
     required this.igst,
     this.roundOff = 0,
     required this.grandTotal,
-    this.paymentmethod,
-    this.paymentstatus,
+    this.shippedto,
     this.termsnotes,
     this.reminderdays,
   });
@@ -126,8 +124,7 @@ class InvoiceModel {
       igst: json['igst'] != null ? double.parse(json['igst'].toString()) : 0.0,
       roundOff: json['roundOff'] != null ? double.parse(json['roundOff'].toString()) : 0.0,
       grandTotal: json['grandTotal'] != null ? double.parse(json['grandTotal'].toString()) : 0.0,
-      paymentmethod: json['paymentmethod'],
-      paymentstatus: json['paymentstatus'],
+      shippedto: json['shippedto'],
       termsnotes: json['termsnotes'],
       reminderdays: json['reminderdays'] != null ? int.tryParse(json['reminderdays'].toString()) : null,
     );
@@ -150,8 +147,7 @@ class InvoiceModel {
       'igst': igst,
       'roundOff': roundOff,
       'grandTotal': grandTotal,
-      if (paymentmethod != null) 'paymentmethod': paymentmethod,
-      if (paymentstatus != null) 'paymentstatus': paymentstatus,
+      if (shippedto != null) 'shippedto': shippedto,
       if (termsnotes != null) 'termsnotes': termsnotes,
       if (reminderdays != null) 'reminderdays': reminderdays,
     };

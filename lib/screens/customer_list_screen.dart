@@ -246,9 +246,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                                       ),
                                     ),
                                   ),
-
                                   const SizedBox(width: 13),
-
                                   // Name + location
                                   Expanded(
                                     child: Column(

@@ -293,7 +293,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      invoice.type,
+                      type == "GST" ? "Tax Invoice" : "Quotation",
                       style: const TextStyle(
                         color: AppColors.success,
                         fontSize: 10,

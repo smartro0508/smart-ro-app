@@ -4,6 +4,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/invoice_model.dart';
+import '../models/bank_model.dart';
+import '../service/bank_service.dart';
 
 class PdfService {
   static String numberToWords(int number) {
@@ -81,6 +83,15 @@ class PdfService {
   static Future<Uint8List> generateInvoicePdfBytes(InvoiceModel invoice) async {
     final pdf = pw.Document();
 
+    BankModel? bank;
+    if (invoice.isGstApplied) {
+      try {
+        bank = await BankService().getBankDetails();
+      } catch (e) {
+        // Ignore error and proceed without bank details
+      }
+    }
+
     final imageBytes = await rootBundle.load('assets/app-logo.png');
     final appLogo = pw.MemoryImage(imageBytes.buffer.asUint8List());
 
@@ -103,46 +114,52 @@ class PdfService {
     final vgaurdLogo = pw.MemoryImage(vgaurdBytes.buffer.asUint8List());
 
     pdf.addPage(
-      pw.MultiPage(
+      pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(0),
-        header: (context) => _buildHeader(invoice, appLogo),
-        footer: (context) =>
+        build: (context) => pw.Column(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(
+              children: [
+                _buildHeader(invoice, appLogo),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 40),
+                  child: pw.Column(
+                    children: [
+                      pw.SizedBox(height: 20),
+                      _buildCustomerInfo(invoice),
+                      pw.SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+                _buildTable(invoice),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 40),
+                  child: pw.Column(
+                    children: [
+                      pw.SizedBox(height: 20),
+                      pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          _buildLeftNotes(invoice, bank),
+                          _buildRightTotals(invoice),
+                        ],
+                      ),
+                      pw.SizedBox(height: 20),
+                      pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: _buildSignature(signatureImage, smartroLogo),
+                      ),
+                      pw.SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             _buildFooter(lgLogo, aquaLogo, hawellsLogo, vgaurdLogo),
-        build: (context) => [
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 40),
-            child: pw.Column(
-              children: [
-                pw.SizedBox(height: 20),
-                _buildCustomerInfo(invoice),
-                pw.SizedBox(height: 20),
-              ],
-            ),
-          ),
-          _buildTable(invoice),
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 40),
-            child: pw.Column(
-              children: [
-                pw.SizedBox(height: 20),
-                pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    _buildLeftNotes(invoice),
-                    _buildRightTotals(invoice),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: _buildSignature(signatureImage, smartroLogo),
-                ),
-                pw.SizedBox(height: 10),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
 
@@ -175,7 +192,19 @@ class PdfService {
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Image(appLogo, width: 140),
+              pw.Stack(
+                children: [
+                  pw.Image(appLogo, width: 140),
+                  pw.Positioned(
+                    right: 0,
+                    top: 0,
+                    child: pw.Text(
+                      'TM',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
               pw.SizedBox(height: 15),
               pw.Text(
                 invoice.isGstApplied
@@ -188,7 +217,7 @@ class PdfService {
               ),
               pw.SizedBox(height: 3),
               pw.Text(
-                'Ph: 6383450508, 9790188321',
+                'Ph: 6383450508, 9384450508',
                 style: const pw.TextStyle(
                   fontSize: 10,
                   color: PdfColors.grey700,
@@ -216,6 +245,45 @@ class PdfService {
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
+              pw.SizedBox(height: 8),
+              pw.Row(
+                children: [
+                  pw.SizedBox(
+                    width: 70,
+                    child: pw.Text(
+                      'Invoice No',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  pw.Text(
+                    ': ${invoice.invoiceNumber ?? ""}',
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+              pw.Row(
+                children: [
+                  pw.SizedBox(
+                    width: 70,
+                    child: pw.Text(
+                      'Date',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  pw.Text(
+                    ': ${invoice.invoiceDate}',
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 20),
             ],
           ),
         ],
@@ -289,49 +357,28 @@ class PdfService {
             ],
           ),
         ),
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Row(
+        if (invoice.shippedto != null &&
+            invoice.shippedto!.trim().isNotEmpty) ...[
+          pw.SizedBox(width: 40),
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.SizedBox(
-                  width: 70,
-                  child: pw.Text(
-                    'Invoice No',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
+                pw.Text(
+                  'Shipping to:',
+                  textAlign: pw.TextAlign.end,
+                  style: const pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColors.grey600,
                   ),
                 ),
-                pw.Text(
-                  ': ${invoice.invoiceNumber ?? ""}',
-                  style: const pw.TextStyle(fontSize: 10),
-                ),
+                pw.SizedBox(height: 4),
+                pw.Text(invoice.shippedto!, style: pw.TextStyle(fontSize: 12)),
+                pw.SizedBox(height: 4),
               ],
             ),
-            pw.SizedBox(height: 4),
-            pw.Row(
-              children: [
-                pw.SizedBox(
-                  width: 70,
-                  child: pw.Text(
-                    'Date',
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.Text(
-                  ': ${invoice.invoiceDate}',
-                  style: const pw.TextStyle(fontSize: 10),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 20),
-          ],
-        ),
+          ),
+        ],
       ],
     );
   }
@@ -361,7 +408,7 @@ class PdfService {
             style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
           ),
           pw.Expanded(
-            child: pw.Text(value, style: const pw.TextStyle(fontSize: 10)),
+            child: pw.Text(value, style: const pw.TextStyle(fontSize: 12)),
           ),
         ],
       ),
@@ -485,7 +532,7 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildLeftNotes(InvoiceModel invoice) {
+  static pw.Widget _buildLeftNotes(InvoiceModel invoice, BankModel? bank) {
     return pw.Expanded(
       child: pw.Padding(
         padding: const pw.EdgeInsets.only(right: 20),
@@ -536,41 +583,26 @@ class PdfService {
                 style: const pw.TextStyle(fontSize: 10),
               ),
             ],
-            pw.SizedBox(height: 20),
-            if (invoice.isGstApplied) ...[
-              pw.Row(
-                children: [
-                  pw.Text(
-                    'PAYMENT METHOD : ',
-                    style: pw.TextStyle(
-                      color: PdfColor.fromHex('#5A9BD5'),
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 10,
-                    ),
-                  ),
-                  pw.Text(
-                    (invoice.paymentmethod ?? 'Cash').toUpperCase(),
-                    style: const pw.TextStyle(fontSize: 10),
-                  ),
-                ],
+            if (invoice.isGstApplied && bank != null) ...[
+              pw.SizedBox(height: 15),
+              pw.Text(
+                'Bank Details',
+                style: pw.TextStyle(
+                  color: PdfColor.fromHex('#5A9BD5'),
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
               ),
               pw.SizedBox(height: 4),
-              pw.Row(
-                children: [
-                  pw.Text(
-                    'PAYMENT STATUS : ',
-                    style: pw.TextStyle(
-                      color: PdfColor.fromHex('#5A9BD5'),
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 10,
-                    ),
-                  ),
-                  pw.Text(
-                    (invoice.paymentstatus ?? 'Unpaid').toUpperCase(),
-                    style: const pw.TextStyle(fontSize: 10),
-                  ),
-                ],
-              ),
+              _buildAccountCard("Account Name", bank.accountholder),
+              pw.SizedBox(height: 4),
+              _buildAccountCard("Bank Name", bank.bankname),
+              pw.SizedBox(height: 4),
+              _buildAccountCard("Account Number", bank.accountnumber),
+              pw.SizedBox(height: 4),
+              _buildAccountCard("IFSC", bank.ifsccode),
+              pw.SizedBox(height: 4),
+              _buildAccountCard("Branch", bank.branch),
             ],
           ],
         ),
@@ -578,8 +610,27 @@ class PdfService {
     );
   }
 
+  static pw.Widget _buildAccountCard(String title, String value) {
+    return pw.Row(
+      children: [
+        pw.Expanded(
+          child: pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontSize: 11,
+              color: PdfColor.fromHex('#008B8B'),
+            ),
+          ),
+        ),
+        pw.Text(":"),
+        pw.SizedBox(width: 10),
+        pw.Expanded(child: pw.Text(value, style: pw.TextStyle(fontSize: 11))),
+      ],
+    );
+  }
+
   static pw.Widget _buildRightTotals(InvoiceModel invoice) {
-    double totalGst = invoice.cgst + invoice.sgst + invoice.igst;
+    double _ = invoice.cgst + invoice.sgst + invoice.igst;
     return pw.Container(
       width: 250,
       child: pw.Column(
@@ -589,8 +640,14 @@ class PdfService {
             'Rs.${invoice.subtotal.toStringAsFixed(2)}',
           ),
           if (invoice.isGstApplied) ...[
-            _buildTotalRow('CGST (9%) -', 'Rs.${invoice.cgst.toStringAsFixed(2)}'),
-            _buildTotalRow('SGST (9%) -', 'Rs.${invoice.sgst.toStringAsFixed(2)}'),
+            _buildTotalRow(
+              'CGST (9%) -',
+              'Rs.${invoice.cgst.toStringAsFixed(2)}',
+            ),
+            _buildTotalRow(
+              'SGST (9%) -',
+              'Rs.${invoice.sgst.toStringAsFixed(2)}',
+            ),
           ],
           _buildTotalRow(
             'DISCOUNT -',

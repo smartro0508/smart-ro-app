@@ -16,6 +16,8 @@ import 'service/product_service.dart';
 import 'controller/product_cubit.dart';
 import 'service/service_service.dart';
 import 'controller/service_cubit.dart';
+import 'service/bank_service.dart';
+import 'controller/bank_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +42,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => InvoiceCubit(InvoiceService())),
         BlocProvider(create: (context) => ProductCubit(ProductService())),
         BlocProvider(create: (context) => ServiceCubit(ServiceService())),
+        BlocProvider(create: (context) => BankCubit(BankService())),
       ],
       child: MaterialApp.router(
         title: 'Smart RO App',
