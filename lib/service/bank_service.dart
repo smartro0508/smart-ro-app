@@ -56,7 +56,7 @@ class BankService {
 
   Future<BankModel> createBank(BankModel bank) async {
     try {
-      final response = await _dio.post('/banks/create', data: bank.toJson());
+      final response = await _dio.post('/banks/update', data: bank.toJson());
       if (response.statusCode == 201 || response.statusCode == 200) {
         return BankModel.fromJson(response.data['data']);
       } else {
@@ -76,8 +76,8 @@ class BankService {
 
   Future<BankModel> updateBank(BankModel bank) async {
     try {
-      final response = await _dio.put(
-        '/banks/update/${bank.id}',
+      final response = await _dio.post(
+        '/banks/update',
         data: bank.toJson(),
       );
       if (response.statusCode == 200) {

@@ -22,16 +22,11 @@ class BankCubit extends Cubit<BankState> {
     try {
       emit(BankSaving());
       BankModel savedBank;
-      if (bank.id != null && bank.id!.isNotEmpty) {
-        savedBank = await _bankService.updateBank(bank);
-      } else {
-        savedBank = await _bankService.createBank(bank);
-      }
+      savedBank = await _bankService.updateBank(bank);
       emit(BankSaved(savedBank));
       emit(BankLoaded(savedBank));
     } catch (e) {
       emit(BankSaveError(e.toString().replaceAll('Exception: ', '')));
-      // Restore loaded state after showing error
       fetchBankDetails();
     }
   }

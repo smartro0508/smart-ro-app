@@ -380,6 +380,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildBankTab() {
+    final currentState = context.watch<BankCubit>().state;
+    if (currentState is BankLoaded && currentState.bank != null) {
+      if (_bankId != currentState.bank!.id) {
+        _bankId = currentState.bank!.id;
+        _accountHolderController.text = currentState.bank!.accountholder;
+        _bankNameController.text = currentState.bank!.bankname;
+        _accountNumberController.text = currentState.bank!.accountnumber;
+        _ifscCodeController.text = currentState.bank!.ifsccode;
+        _branchController.text = currentState.bank!.branch;
+      }
+    }
+
     return BlocListener<BankCubit, BankState>(
       listener: (context, state) {
         if (state is BankLoaded) {
@@ -399,13 +411,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           );
         } else if (state is BankError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        } else if (state is BankSaveError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),

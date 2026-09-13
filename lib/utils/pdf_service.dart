@@ -114,52 +114,46 @@ class PdfService {
     final vgaurdLogo = pw.MemoryImage(vgaurdBytes.buffer.asUint8List());
 
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(0),
-        build: (context) => pw.Column(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          children: [
-            pw.Column(
+        header: (context) => _buildHeader(invoice, appLogo),
+        footer: (context) => _buildFooter(lgLogo, aquaLogo, hawellsLogo, vgaurdLogo),
+        build: (context) => [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 40),
+            child: pw.Column(
               children: [
-                _buildHeader(invoice, appLogo),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 40),
-                  child: pw.Column(
-                    children: [
-                      pw.SizedBox(height: 20),
-                      _buildCustomerInfo(invoice),
-                      pw.SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-                _buildTable(invoice),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 40),
-                  child: pw.Column(
-                    children: [
-                      pw.SizedBox(height: 20),
-                      pw.Row(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          _buildLeftNotes(invoice, bank),
-                          _buildRightTotals(invoice),
-                        ],
-                      ),
-                      pw.SizedBox(height: 20),
-                      pw.Align(
-                        alignment: pw.Alignment.centerRight,
-                        child: _buildSignature(signatureImage, smartroLogo),
-                      ),
-                      pw.SizedBox(height: 10),
-                    ],
-                  ),
-                ),
+                pw.SizedBox(height: 20),
+                _buildCustomerInfo(invoice),
+                pw.SizedBox(height: 20),
               ],
             ),
-            _buildFooter(lgLogo, aquaLogo, hawellsLogo, vgaurdLogo),
-          ],
-        ),
+          ),
+          _buildTable(invoice),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 40),
+            child: pw.Column(
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.SizedBox(height: 20),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    _buildLeftNotes(invoice, bank),
+                    _buildRightTotals(invoice),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+                pw.Align(
+                  alignment: pw.Alignment.centerRight,
+                  child: _buildSignature(signatureImage, smartroLogo),
+                ),
+                pw.SizedBox(height: 10),
+              ],
+            ),
+          ),
+        ],
       ),
     );
 
